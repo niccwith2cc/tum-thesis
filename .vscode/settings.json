@@ -1,0 +1,23 @@
+{
+  "latex-workshop.latex.tools": [
+    {
+      "name": "latexmk-shell-escape",
+      "command": "latexmk",
+      "args": [
+        "--pdf",
+        "-file-line-error",
+        "-interaction=nonstopmode",
+        "-shell-escape",
+        "%DOC%"
+      ]
+    }
+  ],
+  "latex-workshop.latex.recipes": [
+    {
+      "name": "latexmk (pdf, shell-escape)",
+      "tools": [
+        "latexmk-shell-escape"
+      ]
+    }
+  ]
+}
