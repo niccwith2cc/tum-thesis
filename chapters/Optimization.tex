@@ -1,0 +1,164 @@
+% !TEX root = ../main.tex
+
+\chapter{Optimizations}
+\label{chapter:optimizations}
+
+In order to perform optimizations on any code one must first identify the underlying bottlenecks and inefficiencies in said piece of code.
+Hence, a simple profiler was adapted inside the code to measure the execution time of certain functions. The current chapter discusses
+how the optimizations were applied to the old code in order to achieve a recommended speed up for the autonomous vehicle to be responsive enough
+to be driven accurately to how the planner and controller predict. 
+
+\section{Sampling}
+
+The original sampling strategy for the motion planner:
+
+Starting with an initial state of the longitudinal and lateral position and velocity of the vehicle, $S_0 = [s_0, \dot{s}_0, n_0, \dot{n}_0]$, respectively.
+A set of sample trajectories are generated constrained by the initial longitudinal velocity and lateral position of the vehicle, the samples terminate at
+the end states, $S_{\text{end}, ij} = [\dot{s}_{\text{end}, i}, n_{\text{end}, j}, \dot{n}_{\text{end}, j}]$ with a specific candidate ${ij}$. The sampling
+strategy is split into first the longitudinal sample component followed by the lateral sample component. 
+
+[WARNING CHANGE LATER] % probably flip the entire description start with what we want to end with. s(t) and the big S matrix 
+
+The longitudinal sampling is initialized by discretizing the time horizon $T$ into equally spaced steps, which results in a discrete time vector. 
+Subsequently, the range of permissible longitudinal velocities $[\dot{s}_{\text{min}}, \dot{s}_{\text{max}}]$ at the trajectory's endpoint is determined, 
+constrained by the initial velocity, the target velocity, and the velocity derived from the global race line. The upper bound of this range is
+computed as
+
+\begin{equation}
+    \dot{s}_{\text{max}} = \text{min}(V_{\text{max}}, \text{max}(\dot{s}_0, \dot{s}_{\text{incr}}) \cdot K_s ),
+\end{equation}
+
+where K is a a scaling factor that accounts for a necessary deviation from the raceline, while the velocity increment
+
+\begin{equation}
+    \dot{s}_{\text{incr}} = \text{min}(\dot{s}_0 + \Delta \dot{s}, \dot{s}_{rl}(T)),
+\end{equation}
+
+The velocity samples $ \{ \dot{s}_{e, i} \}_{i=0}^{N_s}$ are generated within the range, where Ns denotes the number of samples. Each sampled end velocity 
+is utilized to construct a longitudinal trajectory using a quadratic polynomial,
+
+\begin{equation}
+    s(t) = c_0 + c_1 t + c_2 t^2 ,
+\end{equation}
+
+and the corresponding longitudinal velocity is given by,
+
+\begin{equation}
+    \dot{s}(t) = c_1 + 2c_2 t.
+\end{equation}
+
+The coefficient $c_0, c_1, c_2$ of the polynomial are determined by solving the linear system $A_s c_s = b_s$ with
+
+\begin{equation}
+    A_s = \begin{bmatrix}
+        1 & 0 & 0 \\
+        0 & 1 & 0 \\
+        0 & 1 & 2T
+    \end{bmatrix}, \quad
+    b_s = \begin{bmatrix}
+        s_0 \\
+        \dot{s}_0\\
+        \dot{s}_i
+    \end{bmatrix}
+\end{equation}
+
+The full algorithm can be expressed in the below pseudocode,  
+
+\begin{algorithm}
+\caption{Original Longitudinal Sampling}
+\begin{algorithmic}[1]
+\Require Initial position $s_{start}$, clamped initial velocity $\dot{s}_{init}$, time vector $\mathbf{t} \in \mathbb{R}^{m}$, target end velocities $\mathbf{v}_{end} \in \mathbb{R}^{N}$, duplication factor $n$, track length $L$
+\Ensure Position trajectories $\mathbf{S}$, velocity trajectories $\dot{\mathbf{S}}$, end positions $\mathbf{s}_{end}$
+\State $t_{end} \gets \mathbf{t}[m]$ \Comment{Final time step}
+\State $\mathbf{A} \gets \begin{pmatrix} 1 & 0 & 0 \\ 0 & 1 & 0 \\ 0 & 1 & 2 t_{end} \end{pmatrix}$
+\State Initialize empty matrices $\mathbf{S}$, $\dot{\mathbf{S}}$ and empty vector $\mathbf{s}_{end}$
+\For{$i = 1$ \textbf{to} $N$}
+    \State $\mathbf{b} \gets \begin{pmatrix} s_{start} \\ \dot{s}_{init} \\ \mathbf{v}_{end, i} \end{pmatrix}$
+    \State $\mathbf{c} \gets \mathbf{A}^{-1} \mathbf{b}$ \Comment{Solve for polynomial coefficients}
+    \State $\mathbf{s}_{sample} \gets c_0 + c_1 \mathbf{t} + c_2 \mathbf{t}^2$ \Comment{Evaluate polynomial}
+    \State $\dot{\mathbf{s}}_{sample} \gets c_1 + 2 c_2 \mathbf{t}$
+    \State $\mathbf{s}_{sample} \gets \mathbf{s}_{sample} \ \text{mod} \ L$ \Comment{Track wrap-around}
+    \State Append $\mathbf{s}_{sample, m}$ to $\mathbf{s}_{end}$ \Comment{Store final position}
+    \For{$j = 1$ \textbf{to} $n$} \Comment{Duplicate samples}
+        \State Append row vector $\mathbf{s}_{sample}^T$ to $\mathbf{S}$
+        \State Append row vector $\dot{\mathbf{s}}_{sample}^T$ to $\dot{\mathbf{S}}$
+    \EndFor
+\EndFor
+\State \Return $\mathbf{S}, \dot{\mathbf{S}}, \mathbf{s}_{end}$
+\end{algorithmic}
+\end{algorithm}
+
+The following pseudocode is the simple improvement instead of solving batches of Ac = b. Where Ac = b is the solution for a single column vector N 
+number of times. Setting up matrix B to hold all N vectors side-by-side as a single matrix of shape 3 x N, saves us doing only one linear solve to find the 
+C coefficients.
+
+\begin{algorithm}
+\caption{Vectorized Longitudinal Sampling}
+\begin{algorithmic}[1]
+\Require Initial position $s_{start}$, clamped initial velocity $\dot{s}_{init}$, time vector $\mathbf{t} \in \mathbb{R}^{m}$, target end velocities $\mathbf{v}_{end} \in \mathbb{R}^{N}$, duplication factor $n$, track length $L$
+\Ensure Position trajectories $\mathbf{S}$, velocity trajectories $\dot{\mathbf{S}}$, end positions $\mathbf{s}_{end}$
+\State $t_{end} \gets \mathbf{t}[m]$ \Comment{Final time step}
+\State $\mathbf{A} \gets \begin{pmatrix} 1 & 0 & 0 \\ 0 & 1 & 0 \\ 0 & 1 & 2 t_{end} \end{pmatrix}$
+\State $\mathbf{B} \gets \begin{pmatrix} s_{start} & s_{start} & \dots & s_{start} \\ \dot{s}_{init} & \dot{s}_{init} & \dots & \dot{s}_{init} \\ \mathbf{v}_{end}[0] & \mathbf{v}_{end}[1] & \dots & \mathbf{v}_{end} [N-1] \end{pmatrix} \in \mathbb{R}^{3 \times N}$ 
+\State $\mathbf{C} \gets \mathbf{A}^{-1} \mathbf{B}$ \Comment{Batched solve for all coefficients, $\mathbf{C} \in \mathbb{R}^{3 \times N}$}
+\State Let $\mathbf{c}_0, \mathbf{c}_1, \mathbf{c}_2 \in \mathbb{R}^{1 \times N}$ be the row vectors of $\mathbf{C}$
+\State Let $\mathbf{1}_{m} \in \mathbb{R}^{m}$ be a column vector of ones
+\State $\mathbf{S}_{raw} \gets \mathbf{1}_m \mathbf{c}_0 + \mathbf{t} \mathbf{c}_1 + \mathbf{t}^2 \mathbf{c}_2$ \Comment{Outer product evaluation, $\mathbf{S}_{raw} \in \mathbb{R}^{m \times N}$}
+\State $\dot{\mathbf{S}}_{raw} \gets \mathbf{1}_m \mathbf{c}_1 + 2\mathbf{t} \mathbf{c}_2$
+\State $\mathbf{S}_{raw}^T \gets \mathbf{S}_{raw}^T \pmod{L}$ \Comment{Vectorized track wrap-around}
+\State $\mathbf{s}_{end} \gets$ the final column vector of $\mathbf{S}_{raw}^T$
+\State $\mathbf{S} \gets$ duplicate each row of $\mathbf{S}_{raw}^T$ sequentially $n$ times
+\State $\dot{\mathbf{S}} \gets$ duplicate each row of $\dot{\mathbf{S}}_{raw}^T$ sequentially $n$ times
+\State \Return $\mathbf{S}, \dot{\mathbf{S}}, \mathbf{s}_{end}$
+\end{algorithmic}
+\end{algorithm}
+
+\section{Wall Collision}
+
+In a similar manner, the function which evaluates how close the vehicle's position relative is to the wall given a small circular radius around that position,
+is evaluated in a slow manner using a for loop while logically correct it ends up taking the largest time fraction of the simulation. However this can be simply
+fixed by employing a simple vectorization to take advantage of the data.
+
+\begin{algorithm}
+\caption{Original Wall Collision}
+\begin{algorithmic}[1]
+\Require Initial position $x_{car}$, $y_{car}$, search radius $r_{\text{search}} = 3.0$, number of discretized points $N = 50$
+\Ensure Matrix of wall boundary points $\mathbf{P}_{wall} \in \mathbb{R}^{2N \times 2}$
+\State Initialize empty list $\mathbf{P}_{\text{wall}}$
+\State $s_{car} \gets \text{ProjectOnTrack}(x_{car}, y_{car})$ \Comment{Find car position in Frenet Frame}
+\State $s_{\text{range}} \gets  1.5r_{\text{search}}$
+\State $s_{\text{search}} \gets \text{LinSpace}(s_{car} - s_{\text{range}}, s_{car} + s_{\text{range}}, N)$ \Comment{$N$ evenly spaced points}
+\For{$i = 1$ \textbf{to} $N$}
+    \State $n_{\text{left}} \gets \text{TrackWidthLeft}(s_{\text{search}}[i])$
+    \State $n_{\text{right}} \gets \text{TrackWidthRight}(s_{\text{search}}[i])$ \Comment{Evaluate track width}
+    \State $p_{\text{center}} \gets \text{FrenetToCartesian}(s_{\text{search}}[i])$ \Comment{Centerline 2D coordinate}
+    \State $\psi \gets \text{Heading}(s_{\text{search}}[i])$ \Comment{Heading of the car at s}
+    \State $\mathbf{n} \gets \begin{pmatrix} -\sin\psi \\ \cos\psi \end{pmatrix}$ \Comment{Compute normal vector}
+    \State $p_{\text{left}} \gets  p_{\text{center}} + n_{\text{left}} \cdot \mathbf{n}$
+    \State $p_{\text{right}} \gets  p_{\text{center}} - n_{\text{right}} \cdot \mathbf{n}$
+    \State Append $p_{\text{left}}$ and $ p_{\text{right}}$ to $\mathbf{P}_{\text{wall}}$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{Vectorized Wall Collision}
+\begin{algorithmic}[1]
+\Require Initial position $x_{car}$, $y_{car}$, search radius $r_{\text{search}} = 3.0$, number of discretized points $N = 50$
+\Ensure Matrix of wall boundary points $\mathbf{P}_{wall} \in \mathbb{R}^{2N \times 2}$
+\State $s_{car} \gets \text{ProjectOnTrack}(x_{car}, y_{car})$ \Comment{Find car position in Frenet Frame}
+\State $s_{\text{range}} \gets  1.5r_{\text{search}}$
+\State $s_{\text{search}} \gets \text{LinSpace}(s_{car} - s_{\text{range}}, s_{car} + s_{\text{range}}, N)$ \Comment{$N$ evenly spaced points}
+\State $\mathbf{n}_{\text{left}} \gets \text{TrackWidthLeft}(s_{\text{search}}) \in \mathbb{R}^N$ \Comment{Evaluate left widths for all points}
+\State $\mathbf{n}_{\text{right}} \gets \text{TrackWidthRight}(s_{\text{search}}) \in \mathbb{R}^N$ \Comment{Evaluate right widths for all points}
+\State $\mathbf{P}_{center} \gets \text{FrenetToCartesian}(s_{\text{search}}) \in \mathbb{R}^{N \times 2}$ \Comment{Centerline coordinates for all points}
+\State $\boldsymbol{\psi} \gets \text{Heading}(s_{\text{search}}) \in \mathbb{R}^N$ \Comment{Headings for all points}
+\State $\mathbf{n}_x \gets -\sin(\boldsymbol{\psi})$ \Comment{Element-wise sine operations}
+\State $\mathbf{n}_y \gets \cos(\boldsymbol{\psi})$ \Comment{Element-wise cosine operations}
+\State $\mathbf{n} \gets \begin{bmatrix} \mathbf{n}_x & \mathbf{n}_y \end{bmatrix} \in \mathbb{R}^{N \times 2}$ \Comment{Stack into normal matrix}
+\State $\mathbf{P}_{\text{left}} \gets \mathbf{P}_{center} + \mathbf{n}_{\text{left}} \cdot \mathbf{n}$ \Comment{Scale normals (broadcast) and compute left points}
+\State $\mathbf{P}_{\text{right}} \gets \mathbf{P}_{center} - \mathbf{n}_{\text{right}} \cdot \mathbf{n}$ \Comment{Scale normals (broadcast) and compute right points}
+\State $\mathbf{P}_{wall} \gets \begin{bmatrix} \mathbf{P}_{\text{left}} \\ \mathbf{P}_{\text{right}} \end{bmatrix}$ \Comment{Concatenate points matrix vertically}
+\State \Return $\mathbf{P}_{wall}$
+\end{algorithmic}
+\end{algorithm}
