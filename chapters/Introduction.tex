@@ -2,29 +2,62 @@
 \chapter{Introduction}
 \label{chapter:Introduction}
 
-% My breakdown of the paper so far is this:
-% \begin{enumerate}
-%   \item Discuss the improvements to the temporal sampling planner
-%   \item Include graphical analysis of laptop and desktop
-%   \item Discuss denser sampling analysis (speed up graphs, scaling graph, include accuracy graph)
-%   \item Discuss Sim vs Real differences
-%   \item Include graphical analysis of sim vs real graphs speed up, accuracy
-%   \item Compare temporal vs spatial motion planner
-%   \item Include racing graph analysis
-% \end{enumerate}
+% Introducing topics such as autonomous driving, what is it, how is it used currently, what are its current limitations. Introducing specific topic of this chapter
+% including autonomous racing, and how is it achieved, what are some benefits. Include examples on modular and full differentiable and how we need to link them together
+% to have something interpretable yet still computationally efficient. Talk about the common aspects of the differentiable and modular design of DiffPlan and conclude with
+% discussing the steps of DiffPlan (perception, prediction, planning, and control). Finally, talk about the planners, discuss what planner we already have and what we are
+% doing to it (optimization) and the planner we are testing now against it. Talk about the rest of the paper after.
 
-Introducing topics such as autonomous driving, what is it, how is it used currently, what are its current limitations. Introducing specific topic of this chapter
-including autonomous racing, and how is it achieved, what are some benefits. Include examples on modular and full differentiable and how we need to link them together
-to have something interpretable yet still computationally efficient. Talk about the common aspects of the differentiable and modular design of DiffPlan and conclude with
-discussing the steps of DiffPlan (perception, prediction, planning, and control). Finally, talk about the planners, discuss what planner we already have and what we are
-doing to it (optimization) and the planner we are testing now against it. Talk about the rest of the paper after.
+With the continuous improvement of Artificial Intelligence, vehicle manufacturers are now competing to implement advanced driver assistance systems for their fleets,
+with some going as far as looking to develop fully Autonomous Vehicles (AVs) \cite{hu_review_2026}. Companies such as Waymo and Baidu already operate fully autonomous taxi services in a number of cities
+in the United States and China, with several announcements being made that these services will extend to European countries such as England, Switzerland, and Luxembourg \cite{saether_recommendations_2026}.
+Unfortunately, as revolutionary as autonomous vehicles are, they are not without their flaws. These flaws are indicative of the two main architectural structures which are utilized to develop
+and train the autonomous driving algorithms for these vehicles: the modular architecture and the end-to-end neural network architecture \cite{jain_Autonomy_20_2021,jahncke_MINDStackModularInterpretable_2025, huang_DifferentiableIntegratedMotion_2024, karkus_DiffStackDifferentiableModular_2022}.
 
-\begin{figure}[ht]
-  \centering
-  \includegraphics[width=\textwidth]{images/grouped_comparison.png}
-  \caption{$u(x)$}%{Numerically solved solution}
-  \label{fig:swingPlot}
-\end{figure}
+The modular architecture also called stack, relies on imposing human written rules to dictate the vehicle's behavior \cite{hu_review_2026, jain_Autonomy_20_2021, jahncke_MINDStackModularInterpretable_2025}.
+The stack is generally made up of so called units which consists of: perception, takes sensor data to be interpreted and fed into the prediction unit, estimating a future state based on an end goal e.g predicting the path of surrounding cars in traffic.
+This prediction allows the planning unit to compute a feasible trajectory which the ego vehicle can perform safely, and ultimately the control unit takes the trajectory and transfers commands to the car in the form of throttle input
+and steering angle to traverse the planned path. 
+
+On the one hand, the downstream pipeline offers a very interpretable path for the engineer to understand what to modify in the cost function and ensure well defined
+safety measures are implemented \cite{jain_Autonomy_20_2021, jahncke_MINDStackModularInterpretable_2025, karkus_DiffStackDifferentiableModular_2022}. 
+However, these rule-based systems depend heavily on experts who continually formulate new rules for the vehicle to find the optimal cost function \cite{jain_Autonomy_20_2021,karkus_DiffStackDifferentiableModular_2022}. 
+Inherently unable to generalize their behavior, causing encountering edge cases or expanding into new locations necessitating extensive re-tuning, which introduces substantial scalability bottlenecks \cite{jain_Autonomy_20_2021,huang_DifferentiableIntegratedMotion_2024, karkus_DiffStackDifferentiableModular_2022}. 
+% Edit this line a bit more
+Furthermore, implementing a simulator for testing the full stack does not provide an accurate enough evaluation of real world conditions, hence on-road testing will have to be performed, further increasing the scalability bottleneck \cite{jain_Autonomy_20_2021}.
+
+Talk about end-to-end neural network
+
+Alternatively, the end-to-end neural network architecture replaces the entire modular stack, taking in sensor data from the vehicle and through a type of reinforcement learning algorithm attempts to predict the most optimal path and guidance for the ego vehicle.
+This requires significant training data to improve the predictions of the neural network. Good at generalizing behavior but struggles with discrete tasks such as safety and road designation.
+
+Talk about MIND stack and how it is important for the racing aspect of autonomous
+A middle of the road approach is now picking up traction which combines a modular stack with the end-to-end neural network, called the Modular, Interpretable, End-to-End Differentiable (MIND) stack.
+This approach allows to combine the best performance of the modular and neural network stacks with little to no drawbacks 
+% Conversely, improvements to the modular stack have been implemented in the form of introducing neural networks for the perception and prediction tasks \cite{hu_review_2026,jain_Autonomy_20_2021}.
+
+Pros
+
+Talk about differentiable planner and give pros.
+
+Talk about the possible optimizations to the current planner. Talk about the different types of planners. 
+
+Talk about what will we be doing for the rest of the paper.
+
+% The AI used to develop and train the AVs are often flawed within themselves, described often as being mathematical blackboxes, they are usually unable to deal with real-world scenarios,
+% which results in impeding traffic or endangering other drivers or pedestrians.
+
+% Reinforcement Learning and Imitation Learning require significant amount of data to be captured by real life driving or acquired in some manner for the training of these models to occur,
+% which takes a large amount of time and require considerable computational power. 
+
+% The current design stack of autonomous vehicles can be broken down into perception, prediction, planning, and control (possible sources). However, currently only perception and prediction modules are only
+% implemented in a machine learning algorithm, while planning and simulation are still tweaked by hand using ruled based approaches \cite{jain_Autonomy_20_2021}.
+% In order to reach consumer level performance using this method requires significant scale up to discover all possible edge case scenarios while driving.
+% We argue that Autonomy 1.0 will not achieve this due to three scalability bottlenecks: (i) rule-based planners and simulators do not effectively model the complexity and
+% diversity of driving behaviours and need to be re-tuned for different geographical regions, they fundamentally have not benefited from the breakthroughs in deep-learning (Fig. 2) (ii) due to the
+% limited efficacy of rule-based simulators, evaluation is done mainly via road-testing, which lengthens the development cycle, and (iii) road testing operations are expensive and scale poorly with SDV
+% performance.
+
 
 % This document has been created in order to show you some of the capabilities 
 % of \LaTeX.  A great resource for an introduction to \LaTeX\xspace is Tobias
