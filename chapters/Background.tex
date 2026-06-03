@@ -1,10 +1,83 @@
 % !TEX root = ../main.tex
 
-\chapter{Background}
+\chapter{Autonomous Driving Systems}
 \label{chapter:background}
 
-\section{Sampling Planner}
+\section{Modular Stack}
+\label{section:ModularStack}
 
-A sampling planner is currently being used to find possible trajectories for the vehicle to take, a cost function assess all the possible trajectories
-and gives them a score depending on the path's "correctness". The path with the smallest cost is chosen and is then fed to the MPC controller as the ideal
-required trajectory. 
+Give more detailed and precise information about the modular stack. Discuss further their limitations which include, modules not being able to exchange information
+upstream to find a pattern of what is a better performing parameter or characteristic. Hand-tuned, time consuming, non scalable.
+
+\section{E2E NN Stack}
+\label{section:NNStack}
+
+Include specific examples of use cases. Discuss further about global optimal point using gradient descent methods.
+
+\section{Modular Differentiable Stack}
+\label{section:ModDiffStack}
+
+Give examples on this specific topic which includes DiffStack, DIPP, etc. Talk about latest introduction on which you will built upon the work of Jeremy and Felix.
+Introduce the current working stack.
+
+\chapter{Sampling Planner}
+\label{chapter:SamplingPlanner}
+
+Covering the mathematical background to understand how the sampling planner works.
+
+Review of systems design for autonomous vehicle software.
+
+Discussion of training strategies?
+
+Discussion on local planner? differentiable local planner?
+
+Current reach of stack? what can be achieved now with all the other work having been done?
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}
+        % Track
+        \draw[thick, double=white, double distance=1.5cm] 
+            (0, 0) -- (0, 2) arc (180:90:2) -- (5.5, 4);
+        % racing line
+        \draw[very thick, dashed, red] 
+            plot [smooth, tension=0.6] coordinates {(-0.5, 0) (-0.3, 1.2) (0.9, 3.1) (3.5, 4) (5.5, 4.2)};
+        % car
+        \fill[black] (0.05,2) circle (2pt);
+        \draw[->, thick] (1,0) -- (1.5,0) node[right] {$x$};
+        \draw[->, thick] (1,0) -- (1,0.5) node[above] {$y$};
+    \end{tikzpicture}
+    \caption{Track Representation}
+    \label{fig:trackrep}
+\end{figure}
+
+\section{Frenet Frame}
+
+The Frenet frame of reference is often used when describing a moving particle along a differentiable curve. The use of Frenet coordinate system
+$(s, n)$ allows simpler interpretation of curved paths than using a rigid system such as the Cartesian coordinates $(x, y)$.
+The curvilinear Frenet frame consists of the longitudinal path $s$ along the curve and its deviation from said curve $n$ or sometimes called $d$.
+% modify the phrasing
+An additional reason Frenet is beneficial to use, defining planning path constrains or target goals for the vehicle is simple due to the separation of longitudinal and lateral path directions. 
+The curve vehicles follow is called a raceline, it is a mathematically optimal line aiming to achieve a certain goal, most commonly fastest time to complete a full lap
+around a circuit, or minimum curvature of the raceline. The raceline may be represented as continuous flat curve:
+
+\begin{equation}
+    \mathcal{R} = \{ \textbf{r}_{\text{raceline}}(s) \in \mathbb{R}^2 \ | \ s \in [0, s_{\text{lap}}]\},
+\end{equation}
+where $s$ is the arc-length distance along the raceline curve, and $s_{\text{lap}}$ the total length of a single lap around the circuit. 
+The position vector of the reference curve can be described in simple Cartesian coordinates, for each point $s$ on the curve,
+\begin{equation}
+    \textbf{r}(s) = \begin{bmatrix}
+        x_{\text{raceline}} (s) \\ y_{\text{raceline}} (s)
+    \end{bmatrix}.
+\end{equation}
+Additionally, the tangent vector of the raceline defined as the derivative of the position vector with respect to $s$, and the normal vector is orthogonal to the tangent vector, can both be mathematically described as,
+\begin{equation}
+    \textbf{t}(s) = \frac{d \textbf{r}(s)}{d s} = \begin{bmatrix} \cos (  \psi_{\text{raceline}}(s)) \\ \sin (\psi_{\text{raceline}}(s)) \end{bmatrix}, \qquad
+    \textbf{n}(s) = \begin{bmatrix} - \sin (\psi_{\text{raceline}}(s)) \\ \cos (psi_{\text{raceline}}(s)) \end{bmatrix}.
+\end{equation}
+Where $\psi (s)$ is the heading angle, relative to the global Cartesian frame, of the raceline at point $s$.
+
+% A sampling planner is currently being used to find possible trajectories for the vehicle to take, a cost function assess all the possible trajectories
+% and gives them a score depending on the path's "correctness". The path with the smallest cost is chosen and is then fed to the MPC controller as the ideal
+% required trajectory.

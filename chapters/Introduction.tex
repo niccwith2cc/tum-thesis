@@ -9,7 +9,7 @@
 % doing to it (optimization) and the planner we are testing now against it. Talk about the rest of the paper after.
 
 With the continuous improvement of Artificial Intelligence, vehicle manufacturers are now competing to implement advanced driver assistance systems for their fleets,
-% looking to develop is a mouthful, attempt at modifying it
+%* looking to develop is a mouthful, attempt at modifying it
 with some going as far as looking to develop fully Autonomous Vehicles (AVs) \cite{hu_review_2026}. Companies such as Waymo and Baidu already operate fully autonomous taxi services in a number of cities
 in the United States and China, with several announcements being made that these services will extend to European countries such as England, Switzerland, and Luxembourg \cite{saether_recommendations_2026}.
 Unfortunately, as revolutionary as autonomous vehicles are, they are not without their flaws. These flaws are indicative of the two main architectural structures which are utilized to develop
@@ -22,12 +22,12 @@ and train the autonomous driving algorithms for these vehicles: the modular arch
         \node[name=perc, shape=rectangle, draw=blue, fill=blue!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (2, 0) {Perception};
         \draw[->, black, very thick] (sensors.north) -- node[midway, above] {Data} (1.2, -2.3) -- (1.2, 0) -- (perc.north);
         \node[name=pred, shape=rectangle, draw=blue, fill=blue!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (5.5, 0) {Prediction};
-        \draw[->, black, very thick] (perc.320) -- node[midway, above] {Environment} (pred.40);
-        \draw[->, black, very thick] (perc.220) -- node[midway, below] {Ego Pose} (pred.140);
+        \draw[->, blue, very thick] (perc.320) -- node[midway, above] {Environment} (pred.40);
+        \draw[->, blue, very thick] (perc.220) -- node[midway, below] {Ego Pose} (pred.140);
         \node[name=plan, shape=rectangle, draw=blue, fill=blue!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (9.5, 0) {Planning};
-        \draw[->, black, very thick] (pred.south) -- node[midway, above] {State Estimation} (plan.north);
+        \draw[->, blue, very thick] (pred.south) -- node[midway, above] {State Estimation} (plan.north);
         \node[name=ctrl, shape=rectangle, draw=blue, fill=blue!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (12.5, 0) {Control};
-        \draw[->, black, very thick] (plan.south) -- node[midway, above] {Trajectory} (ctrl.north);
+        \draw[->, blue, very thick] (plan.south) -- node[midway, above] {Trajectory} (ctrl.north);
         \node[name=act, shape=rectangle, draw=black, fill=gray!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (10.5,-2.3) {Actuators};
         \draw[->, black, very thick] (ctrl.south) -- (13.5, 0) -- (13.5, -2.3) -- node[midway, above] {Actuation} (act.south);
     \end{tikzpicture}
@@ -36,36 +36,56 @@ and train the autonomous driving algorithms for these vehicles: the modular arch
 \end{figure}
 
 The modular architecture also called stack, relies on imposing human written rules to dictate the vehicle's behavior \cite{hu_review_2026, jain_Autonomy_20_2021, jahncke_MINDStackModularInterpretable_2025}.
-% perhaps think of a better formulation than: generally made up of so called units which consists
-The stack is generally made up of so called units which consists of: perception, takes sensor data to be interpreted and fed into the prediction unit, estimating a future state based on an end goal e.g predicting the path of surrounding cars in traffic.
+%* perhaps think of a better formulation than: generally made up of so called units which consists
+The stack, seen in Figure \ref{fig:modulararch}, is generally made up of so called units which consists of: perception, takes sensor data to be interpreted and fed into the prediction unit, estimating a future state based on an end goal e.g predicting the path of surrounding cars in traffic.
 This prediction allows the planning unit to compute a feasible trajectory which the ego vehicle can perform safely, and ultimately the control unit takes the trajectory and transfers commands to the car in the form of throttle input
 and steering angle to traverse the planned path. 
 
 On the one hand, the downstream pipeline offers a very interpretable path for the engineer to understand what to modify in the cost function and ensure well defined
 safety measures are implemented \cite{jain_Autonomy_20_2021, jahncke_MINDStackModularInterpretable_2025, karkus_DiffStackDifferentiableModular_2022}. 
 However, these rule-based systems depend heavily on experts who continually formulate new rules for the vehicle to find the optimal cost function \cite{jain_Autonomy_20_2021,karkus_DiffStackDifferentiableModular_2022}. 
-% edit causing encountering edge cases. I wrote this that way to prevent using "which" too often
+%* edit causing encountering edge cases. I wrote this that way to prevent using "which" too often
 Inherently unable to generalize their behavior, causing encountering edge cases or expanding into new locations necessitating extensive re-tuning, which introduces substantial scalability bottlenecks \cite{jain_Autonomy_20_2021,huang_DifferentiableIntegratedMotion_2024, karkus_DiffStackDifferentiableModular_2022}. 
-% Edit this line a bit more
+%* Edit this line a bit more
 Furthermore, implementing a simulator for testing the full stack does not provide an accurate enough evaluation of real world conditions, hence on-road testing will have to be performed, further increasing the scalability bottleneck \cite{jain_Autonomy_20_2021}.
 
-Talk about end-to-end neural network
+% TODO: Talk about end-to-end neural network
+%* add more citations
+Alternatively, the end-to-end neural network architecture replaces the entire modular stack, taking in sensor data from the vehicle and outputs its best prediction of the ego vehicle's course of action \cite{jain_Autonomy_20_2021, karkus_DiffStackDifferentiableModular_2022}.
+The network is trained on deep learning algorithms such as Imitation Learning (IL) or Reinforcement Learning (RL) and gradually improves on its guesses \cite{hu_review_2026,karkus_DiffStackDifferentiableModular_2022,huang_DifferentiableIntegratedMotion_2024,moller_LearningSampleReinforcement2025, ogretmen_local_2025}.
+This training leverages significant large amounts of data and available computational resources, hence it does not suffer from the same scalability issue \cite{jain_Autonomy_20_2021}.
+Furthermore, due to the shear scale amount of data which is processed by the neural network, they perform well at generalizing their behavior to previously unencountered scenarios \cite{jain_Autonomy_20_2021}.
+Unfortunately, the input sensor data requires to be preprocessed before being fed to the neural network, which is very time consuming and costly depending on the amount of data.
+%* modify this, find citations about NN 
+Additionally, most machine learning methods inherently take an extended amount of time to properly train the model to achieve its task, and as neural networks are often described as mathematical black-boxes whose decisions
+are unpredictable, the networks struggle with following discrete tasks such as safety or road limit designations as it attempts to generalize from all the data it has been fed.
+%? Conversely, improvements to the modular stack have been implemented in the form of introducing neural networks for the perception and prediction tasks \cite{hu_review_2026,jain_Autonomy_20_2021}.
 
-Alternatively, the end-to-end neural network architecture replaces the entire modular stack, taking in sensor data from the vehicle and through a type of reinforcement learning algorithm attempts to predict the most optimal path and guidance for the ego vehicle.
-This requires significant training data to improve the predictions of the neural network. Good at generalizing behavior but struggles with discrete tasks such as safety and road designation.
+% TODO: Talk about MIND stack and how it is important for the racing aspect of autonomous
 
-Talk about MIND stack and how it is important for the racing aspect of autonomous
 A middle of the road approach is now picking up traction which combines a modular stack with the end-to-end neural network, called the Modular, Interpretable, End-to-End Differentiable (MIND) stack.
-This approach allows to combine the best performance of the modular and neural network stacks with little to no drawbacks 
-% Conversely, improvements to the modular stack have been implemented in the form of introducing neural networks for the perception and prediction tasks \cite{hu_review_2026,jain_Autonomy_20_2021}.
+This approach allows to combine the best performance of the modular and neural network stacks with little to no drawbacks. 
+Allows differentiability of e2e system to be leveraged and allow upstream propagation of information to earlier modules which help improve each module based on the forward performance of the later module. 
+Takes very little training time since no prefetching or preprocessing of sensor data is needed, ready to go and be used. 
+Currently, DiffStack and DIPP have used these systems to improve their performance and interpretability of the stack, clear definitive outline of what each module does yet have the ability to learn from neighboring modules.
+MIND takes it a step forward by using the performance to update the cost function parameters of the stack.
+Instead of road and traffic usage, this is adapted to autonomous racing specifically in terms of Roboracers / F1tenth scale sizes.
 
-Pros
+%? go in detail? or do we have this be a part of the paper summary
 
-Talk about differentiable planner and give pros.
+% TODO: Talk about how previous work has been done to get stack to work: Felix and Jeremy
 
-Talk about the possible optimizations to the current planner. Talk about the different types of planners. 
+Using DiffLoc, take advantage of Differentiable Localization module to now have 1D Convolution Neural Network, which uses LiDAR sensor to estimate global position.
+Using DiffMPC, (cite paper) provides use of differentiable MPC controller to propagate useful information upstream for previous modules.
+Develop DiffPlan, which takes information from DiffLoc and passes it to DiffMPC. 
+Make it run on F1tenth vehicle. 
 
-Talk about what will we be doing for the rest of the paper.
+Section 2 will cover the mathematical basics to understand how sampling-based planners and differentiable motion planners work.
+Section 2 will also cover more in depth previous work which will be building on top of. 
+Section 3 will cover optimizations to old DiffPlan code which makes the car run faster in ROS2, will also cover new sampling-based motion planner in spatial definition rather than temporal definition.
+Section 4 will cover experiments and how those experiments are laid out for best repeatability.
+Section 5 will cover the results of those experiments and their interpretations for the audience.
+Section 6 will cover the overall conclusion of this paper.
 
 % The AI used to develop and train the AVs are often flawed within themselves, described often as being mathematical blackboxes, they are usually unable to deal with real-world scenarios,
 % which results in impeding traffic or endangering other drivers or pedestrians.
@@ -80,105 +100,3 @@ Talk about what will we be doing for the rest of the paper.
 % diversity of driving behaviours and need to be re-tuned for different geographical regions, they fundamentally have not benefited from the breakthroughs in deep-learning (Fig. 2) (ii) due to the
 % limited efficacy of rule-based simulators, evaluation is done mainly via road-testing, which lengthens the development cycle, and (iii) road testing operations are expensive and scale poorly with SDV
 % performance.
-
-
-% This document has been created in order to show you some of the capabilities 
-% of \LaTeX.  A great resource for an introduction to \LaTeX\xspace is Tobias
-% Oetiker's ''The Not So Short Introduction to \LaTeXe'' \cite{latex}.  Please
-% page through that document
-% before starting with your thesis.
-% Oh, and let's use the mysterious word \gls{computer} here to give the glossary
-% a reason to appear.
-% A third useful option to reference stuff besides citing or glossarying (?) 
-% is using footnotes. Just like
-% this\footnote{Properly formatted clickable URL: \url{https://www.tum.de/}}
-% one.
-% And: lists! Lists with bullet points are amazing. I mean, just look at this:
-% \begin{itemize}
-% 	\item list
-% 	\item all 
-% 	\item the 
-% 	\item things!
-% \end{itemize}
-% % use enumerate for numbers instead of points: 
-% % https://en.wikibooks.org/wiki/LaTeX/List_Structures#List_structures
-% \par
-% Anyways your introduction goes here.
-
-
-% Below a few \LaTeX examples are included for beginners
-% \comment{You can also put comments in the margins for you or your advisor}
-% \begin{figure}[ht]
-%   \centering
-%   \includegraphics[width=5cm]{images/swing_function_plot.png}
-%   \caption{$u(x)$}%{Numerically solved solution}
-%   \label{fig:swingPlot}
-% \end{figure}
-
-
-% Equations can also be labeled
-% \begin{equation}
-% 	\pi = \mathrm{e}^{i\cdot\phi}
-% 	\label{eq:equation1}
-% \end{equation}
-
-
-% And later referenced. Even in subfigures.
-% \begin{figure}[!htb]
-%   \centering
-%   \begin{subfigure}[b]{0.3\textwidth}
-%     \centering
-%   \includegraphics[width=\textwidth]{images/CircCenter}
-%   \caption{Equation~\ref{eq:equation1}}\label{fig:circcenter}
-% \end{subfigure}
-% \hfill
-%   \begin{subfigure}[b]{0.3\textwidth}
-%     \centering
-%   \includegraphics[width=\textwidth]{images/GeneralOffset}
-%   \label{fig:generaloffset}
-%   \caption{Equation~\ref{eq:equation1}}
-% \end{subfigure}
-% \end{figure}
-% \section{Including code}
-
-% Code can be using the package
-% \href{https://www.sharelatex.com/learn/Code\_Highlighting\_with\_minted}{Minted}.
-
-% An example of which of can be found below (see Source Code~\ref{lst:nice_listing})
-% \begin{listing}
-% 	%the language syntax can be declared here.
-% 	\begin{minted}{python} 
-% 	import numpy as np
-	
-% 	def incmatrix(genl1,genl2):
-% 	    m = len(genl1)
-% 	    n = len(genl2)
-% 	    M = None #to become the incidence matrix
-% 	    VT = np.zeros((n*m,1), int)  #dummy variable
-	
-% 	    #compute the bitwise xor matrix
-% 	    M1 = bitxormatrix(genl1)
-% 	    M2 = np.triu(bitxormatrix(genl2),1)
-	
-% 	    for i in range(m-1):
-% 	        for j in range(i+1, m):
-% 	            [r,c] = np.where(M2 == M1[i,j])
-% 	            for k in range(len(r)):
-% 	                VT[(i)*n + r[k]] = 1;
-% 	                VT[(i)*n + c[k]] = 1;
-% 	                VT[(j)*n + r[k]] = 1;
-% 	                VT[(j)*n + c[k]] = 1;
-	
-% 	                if M is None:
-% 	                    M = np.copy(VT)
-% 	                else:
-% 	                    M = np.concatenate((M, VT), 1)
-	
-% 	                VT = np.zeros((n*m,1), int)
-	
-% 	    return M
-% 	\end{minted}
-
-%   \caption{My nice listing}
-%   \label{lst:nice_listing}
-% \end{listing}
