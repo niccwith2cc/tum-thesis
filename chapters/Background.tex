@@ -8,11 +8,22 @@
 
 Give more detailed and precise information about the modular stack. Discuss further their limitations which include, modules not being able to exchange information
 upstream to find a pattern of what is a better performing parameter or characteristic. Hand-tuned, time consuming, non scalable.
+Deterministic rules and behavior.
 
+severe compounding errors when decomposing the
+whole system into lots of smaller-scale but interpretable
+modules, as the perception uncertainty and modeling errors
+would snowball through the pipeline.
+
+which is adopted widely in industry 
+
+%? Conversely, improvements to the modular stack have been implemented in the form of introducing neural networks for the perception and prediction tasks \cite{hu_review_2026,jain_Autonomy_20_2021}.
 \section{E2E NN Stack}
 \label{section:NNStack}
 
 Include specific examples of use cases. Discuss further about global optimal point using gradient descent methods.
+
+Entire pipeline is treated as a single learned task
 
 \section{Modular Differentiable Stack}
 \label{section:ModDiffStack}
@@ -20,8 +31,8 @@ Include specific examples of use cases. Discuss further about global optimal poi
 Give examples on this specific topic which includes DiffStack, DIPP, etc. Talk about latest introduction on which you will built upon the work of Jeremy and Felix.
 Introduce the current working stack.
 
-\chapter{Sampling Planner}
-\label{chapter:SamplingPlanner}
+\chapter{Motion Planner}
+\label{chapter:MotionPlanner}
 
 Covering the mathematical background to understand how the sampling planner works.
 
@@ -57,8 +68,8 @@ The Frenet frame of reference is often used when describing a moving particle al
 $(s, n)$ allows simpler interpretation of curved paths than using a rigid system such as the Cartesian coordinates $(x, y)$.
 The curvilinear Frenet frame consists of the longitudinal path $s$ along the curve and its deviation from said curve $n$ or sometimes called $d$.
 % modify the phrasing
-An additional reason Frenet is beneficial to use, defining planning path constrains or target goals for the vehicle is simple due to the separation of longitudinal and lateral path directions. 
-The curve vehicles follow is called a raceline, it is a mathematically optimal line aiming to achieve a certain goal, most commonly fastest time to complete a full lap
+An additional reason Frenet is beneficial to use is because it simplifies the process of defining planning path constraints or target goals for the vehicle by separating longitudinal and lateral path directions. 
+The curve vehicles follow is called a raceline; it is a mathematically optimal line aiming to achieve a certain goal, most commonly fastest time to complete a full lap
 around a circuit, or minimum curvature of the raceline. The raceline may be represented as continuous flat curve:
 
 \begin{equation}
@@ -81,3 +92,6 @@ Where $\psi (s)$ is the heading angle, relative to the global Cartesian frame, o
 % A sampling planner is currently being used to find possible trajectories for the vehicle to take, a cost function assess all the possible trajectories
 % and gives them a score depending on the path's "correctness". The path with the smallest cost is chosen and is then fed to the MPC controller as the ideal
 % required trajectory.
+
+\chapter{DiffPlan}
+\label{chapter:DiffPlan}
