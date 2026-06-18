@@ -9,10 +9,11 @@ how the optimizations were applied to the old code in order to achieve a recomme
 to be driven accurately to how the planner and controller predict. 
 
 \section{Sampling}
+\label{section:Sampling}
 
 The full algorithm can be expressed in the below pseudocode,  
 
-\begin{algorithm}
+\begin{algorithm}[htbp]
 \caption{Original Longitudinal Sampling}
 \begin{algorithmic}[1]
 \Require Initial position $s_{start}$, clamped initial velocity $\dot{s}_{init}$, time vector $\mathbf{t} \in \mathbb{R}^{m}$, target end velocities $\mathbf{v}_{end} \in \mathbb{R}^{N}$, duplication factor $n$, track length $L$
@@ -40,7 +41,7 @@ The following pseudocode is the simple improvement instead of solving batches of
 number of times. Setting up matrix B to hold all N vectors side-by-side as a single matrix of shape 3 x N, saves us doing only one linear solve to find the 
 C coefficients.
 
-\begin{algorithm}
+\begin{algorithm}[htbp]
 \caption{Vectorized Longitudinal Sampling}
 \begin{algorithmic}[1]
 \Require Initial position $s_{start}$, clamped initial velocity $\dot{s}_{init}$, time vector $\mathbf{t} \in \mathbb{R}^{m}$, target end velocities $\mathbf{v}_{end} \in \mathbb{R}^{N}$, duplication factor $n$, track length $L$
@@ -62,12 +63,13 @@ C coefficients.
 \end{algorithm}
 
 \section{Wall Collision}
+\label{section:WallCollision}
 
 In a similar manner, the function which evaluates how close the vehicle's position relative is to the wall given a small circular radius around that position,
 is evaluated in a slow manner using a for loop while logically correct it ends up taking the largest time fraction of the simulation. However this can be simply
 fixed by employing a simple vectorization to take advantage of the data.
 
-\begin{algorithm}
+\begin{algorithm}[htbp]
 \caption{Original Wall Collision}
 \begin{algorithmic}[1]
 \Require Initial position $x_{car}$, $y_{car}$, search radius $r_{\text{search}} = 3.0$, number of discretized points $N = 50$
@@ -89,7 +91,7 @@ fixed by employing a simple vectorization to take advantage of the data.
 \end{algorithmic}
 \end{algorithm}
 
-\begin{algorithm}
+\begin{algorithm}[htbp]
 \caption{Vectorized Wall Collision}
 \begin{algorithmic}[1]
 \Require Initial position $x_{car}$, $y_{car}$, search radius $r_{\text{search}} = 3.0$, number of discretized points $N = 50$
@@ -112,6 +114,7 @@ fixed by employing a simple vectorization to take advantage of the data.
 \end{algorithm}
 
 \section{GPU Optimization}
+\label{section:GPUOptimization}
 
 maybe include what you did for gpu optimization here.
 

@@ -1,0 +1,21 @@
+% !TEX root = ../main.tex
+\chapter{Experiments}
+\label{chapter:Experiments}
+
+\section{Optimization}
+
+This section describes the experiments required to perform measurements on the degree of optimization that was accomplished.
+This will focus on the runtime of the four algorithms and compare them as they were ran on the Alienware computer.
+Additional to the runtime, the scalability of the algorithm is assessed.
+
+\subsection{Runtime}
+
+The aim is to compare the runtime of the original algorithm, vectorized, gpu focused, and the spatial planner.
+This is done by taking a profile trace of the algorithm running using the pytorch profiler.
+This gives us the runtime of the current algorithm and the breakdown of all the functions that were used and for how long.
+
+We aim to see a significant decrease in the runtime. The future work will be presented to make gpu focused better
+
+\subsection{Scaling}
+
+The aim is to compare the time taken to compute an $n$ number of trajectories vs the log of $n$ to see how it scales as the number of trajectories increase.

@@ -85,17 +85,19 @@ Both of these tasks are now no longer hand tuned by the engineers.
 However, this approach only achieves partial, unit specific optimizations rather than finding a full system optimization.  
 
 \subsection{DiffStack}
+\label{subsection:DiffStack}
 There are varying degrees of hybridization. DiffStack explanation which takes in 
 
 1. Prediction is trained for ego planning/control, not generic forecasting. DiffStack reports up to ~15\% higher prediction effectiveness for planning and fewer errors that actually hurt the plan.
 
-2.  Substantial gains in open-loop and closed-loop planning metrics compared with separately trained modules.
+2. Substantial gains in open-loop and closed-loop planning metrics compared with separately trained modules.
 
 Joint training beats local training — End-to-end training outperforms training prediction in isolation, even when using handcrafted “planning-aware” auxiliary losses.
 
 Keeps modularity — Still uses explicit prediction, planning, and control blocks; you get co-optimization without a black-box end-to-end network.
 
 \subsection{DIPP}
+\label{subsection:DIPP}
 
 Fixes the prediction-planning split — Explicitly targets the two classic modular failures: isolated prediction/planning and hand-tuned planner costs.
 Joint training beats sequential training — In both open-loop and closed-loop tests, integrated training outperforms using a separately trained prediction module — on both planning and prediction metrics.
@@ -103,6 +105,7 @@ Planning-centric prediction — Predictions are shaped so the planner produces t
 Learned cost function — Planner weights are learned from data instead of manually tuned, improving stability and performance (ablations show learnable components matter).
 
 \subsection{MIND}
+\label{subsection:MIND}
 
 \chapter{Motion Planner}
 \label{chapter:MotionPlanner}
@@ -115,6 +118,7 @@ Learned cost function — Planner weights are learned from data instead of manua
 %* Talk about what a motion planner is, what it does specifically. Why the focus on differentiability.
 
 \section{Global vs Local Planning}
+\label{section:GlobalvsLocal}
 
 a general overview of global vs local planning. Include definition of global planning as a general big picture plan that the car must follow.
 In terms of racing similar to a track where a raceline is known, have good guess what to do. This is typically done offline, achieving a specific goal in mind.
@@ -123,20 +127,25 @@ local planning is the car reacting in real time what it needs. obstacle detectio
 Short horizon -> what is the best trajectory
 
 \section{Different Motion Planners}
+\label{section:MotionPlanner}
 
 \subsection{Graph and Search Planners}
+\label{subsection:GraphandSearch}
 
 This includes A* approaches where they discretize space and then turning them differentiable is difficult. find citations
 
 \subsection{Sampling-Based Planners}
+\label{subsection:SamplingBased}
 
 RRT trees and RRT* trees random explore, also hard to differentiate at any point.
 
 \subsection{Frenet Sampling}
+\label{subsection:FrenetSampling}
 
 polynomial samplings
 
 \section{Frenet Frame}
+\label{section:FrenetFrame}
 
 \begin{figure}[htbp]
     \centering
@@ -193,6 +202,7 @@ Where $\psi (s)$ is the heading angle, relative to the global Cartesian frame, o
 %* How can we describe it
 
 \section{Sampling Technique}
+\label{section:SamplingTechnique}
 
 The original sampling strategy for the motion planner:
 
