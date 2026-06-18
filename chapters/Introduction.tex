@@ -51,15 +51,13 @@ Because these systems are inherently unable to generalize their behavior effecti
 This limitation introduces substantial scalability bottlenecks \cite{hu_review_2026, jain_Autonomy_20_2021, huang_DifferentiableIntegratedMotion_2024, karkus_DiffStackDifferentiableModular_2022}. 
 Furthermore, evaluating the vehicle's performance solely through offline simulators does not provide an accurate representation of real-world conditions.
 Consequently, development teams must perform extensive on-road testing, which exacerbates the scalability bottlenecks even further \cite{jain_Autonomy_20_2021}.
-While such an approach can achieve high levels of reliability within carefully engineered scenarios, the aforementioned restrictions makes purely modular architectures difficult to deploy economically across mass-produced autonomous vehicle fleets operating at a global scale.
+While such an approach can achieve high levels of reliability within carefully engineered scenarios, the aforementioned restrictions makes purely modular architectures difficult to deploy economically across mass-produced autonomous vehicle fleets.
 
 %* Add more citations
 Alternatively, the end-to-end neural network architecture replaces the entire modular stack with a single learned model. 
 It takes raw sensor data from the vehicle and outputs its best prediction for the ego vehicle's course of action \cite{jain_Autonomy_20_2021, karkus_DiffStackDifferentiableModular_2022, tampuu_SurveyEndtoEndDriving_2022,wang_VersatileEfficientReinforcement_2022, kocic_end-to-end_2019, lee_autonomous_2020, hu_learning_2021}.
 Commonly used learning paradigms, such as Imitation Learning (IL) or Reinforcement Learning (RL), are used to train the network and gradually improve its predictions \cite{hu_review_2026, karkus_DiffStackDifferentiableModular_2022, huang_DifferentiableIntegratedMotion_2024, tampuu_SurveyEndtoEndDriving_2022, wang_VersatileEfficientReinforcement_2022, moller_LearningSampleReinforcement2025, ogretmen_local_2025}.
 This training leverages large datasets and significant computational resources, thereby mitigating the scalability issues faced by modular stacks, and therefore are able to generalize their behavior to previously unencountered scenarios \cite{jain_Autonomy_20_2021, tampuu_SurveyEndtoEndDriving_2022, wang_VersatileEfficientReinforcement_2022}.
-%? Unfortunately, engineers must preprocess the input sensor data before feeding it to the network, a step that can be highly time-consuming and computationally costly depending on the dataset size.
-%? Additionally, training a neural network to produce deployment-ready predictions for commercial autonomous vehicles requires a substantial amount of time.
 %* find citations about NN 
 Unfortunately, achieving commercial-ready performance for autonomous vehicles requires extensive sensor data collection, preprocessing of the data, and the subsequent computationally intensive training of the neural network \cite{kocic_end-to-end_2019, lee_autonomous_2020, hu_learning_2021}.
 Another drawback of neural networks is that their learned decision-making process remains largely unknown, as they are often described as mathematical black boxes whose internal reasoning is difficult to interpret \cite{hu_review_2026, wang_VersatileEfficientReinforcement_2022, tampuu_SurveyEndtoEndDriving_2022, jain_Autonomy_20_2021, jahncke_MINDStackModularInterpretable_2025}.
@@ -68,20 +66,17 @@ Consequently, although end-to-end models exhibit strong generalization capabilit
 
 %* fix the phrasing, not professional enough 
 A middle-of-the-road approach is now gaining traction in literature, that combines the modular stack with an end-to-end neural network \cite{wang_VersatileEfficientReinforcement_2022, huang_DifferentiableIntegratedMotion_2024, karkus_DiffStackDifferentiableModular_2022, jahncke_MINDStackModularInterpretable_2025, swadiryus_DifferentiableMotionPlanning_2025, koch_DifferentiableInterpretablePath_2025}.
-This hybrid approach retains the structure and interpretability of modular pipelines while integrating learnable components of a neural network.
+This hybrid approach retains the structure and interpretability of modular pipelines while integrating the learnable components of a neural network.
 The goal of this method is to achieve an end-to-end differentiable hybrid stack; where gradients from downstream task losses can be backpropagated through intermediate modules.
-Hence upstream components are trained to improve the overall performance of the model rather than a local optimization of the module.
-Examples of this architecture in urban autonomous driving include DiffStack \cite{karkus_DiffStackDifferentiableModular_2022} and DIPP \cite{huang_DifferentiableIntegratedMotion_2024}, which demonstrate that joint gradient-based optimization of modules outperforms the stack of individually optimized modules.   
+Hence upstream components are trained to improve the overall performance of the model rather than performing a local optimization of each unique module.
+Examples of this architecture in urban autonomous driving include DiffStack \cite{karkus_DiffStackDifferentiableModular_2022} and DIPP \cite{huang_DifferentiableIntegratedMotion_2024}, which demonstrate that joint gradient-based optimization outperforms the stack of individually optimized modules.   
 Additionally, Jahncke \cite{jahncke_MINDStackModularInterpretable_2025} describes the Modular, Interpretable, End-to-End Differentiable (MIND) software stack, which applies the same principle of co-optimizing differentiable localization and control modules on the RoboRacer platform.
 Building on the work of MIND, DiffPlan \cite{swadiryus_DifferentiableMotionPlanning_2025, koch_DifferentiableInterpretablePath_2025}, focused on implementing a differentiable local motion planner which generates a series of possible trajectories and selects the most optimal one.
 Although, this additional work materialized into a more computationally intensive effort than the on-board embedded system on the RoboRacer vehicle could handle.
 Henceforth, this thesis aims to computationally optimize DiffPlan to make it run faster, with a focus on possible vectorizations that can be achieved. 
 Additionally, a new method of local motion planning is introduced called spatial differentiable local motion planner, DiffSpatialPlan, an additional comparison between the traditional temporal and the spatial methods.
 
-%? go in detail? or do we have this be a part of the paper summary
-
-% TODO: Talk about how previous work has been done to get stack to work: Felix and Jeremy
-
+%* modify this later when layout is more clear
 Chapter \ref{part:background} will cover the theoretical basics of autonomous vehicle systems, including the breakdown of the past and current used methods for autonomous navigation. 
 In addition to the mathematical foundations to describe the workings of motion planners and the subsequent branch of differentiable motion planners.
 Concluding with the description and development of the differentiable sampling-based motion planner known as DiffPlan.

@@ -10,58 +10,6 @@ to be driven accurately to how the planner and controller predict.
 
 \section{Sampling}
 
-The original sampling strategy for the motion planner:
-
-Starting with an initial state of the longitudinal and lateral position and velocity of the vehicle, $S_0 = [s_0, \dot{s}_0, n_0, \dot{n}_0]$, respectively.
-A set of sample trajectories are generated constrained by the initial longitudinal velocity and lateral position of the vehicle, the samples terminate at
-the end states, $S_{\text{end}, ij} = [\dot{s}_{\text{end}, i}, n_{\text{end}, j}, \dot{n}_{\text{end}, j}]$ with a specific candidate ${ij}$. The sampling
-strategy is split into first the longitudinal sample component followed by the lateral sample component. 
-
-[WARNING CHANGE LATER] % probably flip the entire description start with what we want to end with. s(t) and the big S matrix 
-
-The longitudinal sampling is initialized by discretizing the time horizon $T$ into equally spaced steps, which results in a discrete time vector. 
-Subsequently, the range of permissible longitudinal velocities $[\dot{s}_{\text{min}}, \dot{s}_{\text{max}}]$ at the trajectory's endpoint is determined, 
-constrained by the initial velocity, the target velocity, and the velocity derived from the global race line. The upper bound of this range is
-computed as
-
-\begin{equation}
-    \dot{s}_{\text{max}} = \text{min}(V_{\text{max}}, \text{max}(\dot{s}_0, \dot{s}_{\text{incr}}) \cdot K_s ),
-\end{equation}
-
-where K is a a scaling factor that accounts for a necessary deviation from the raceline, while the velocity increment
-
-\begin{equation}
-    \dot{s}_{\text{incr}} = \text{min}(\dot{s}_0 + \Delta \dot{s}, \dot{s}_{rl}(T)),
-\end{equation}
-
-The velocity samples $ \{ \dot{s}_{e, i} \}_{i=0}^{N_s}$ are generated within the range, where Ns denotes the number of samples. Each sampled end velocity 
-is utilized to construct a longitudinal trajectory using a quadratic polynomial,
-
-\begin{equation}
-    s(t) = c_0 + c_1 t + c_2 t^2 ,
-\end{equation}
-
-and the corresponding longitudinal velocity is given by,
-
-\begin{equation}
-    \dot{s}(t) = c_1 + 2c_2 t.
-\end{equation}
-
-The coefficient $c_0, c_1, c_2$ of the polynomial are determined by solving the linear system $A_s c_s = b_s$ with
-
-\begin{equation}
-    A_s = \begin{bmatrix}
-        1 & 0 & 0 \\
-        0 & 1 & 0 \\
-        0 & 1 & 2T
-    \end{bmatrix}, \quad
-    b_s = \begin{bmatrix}
-        s_0 \\
-        \dot{s}_0\\
-        \dot{s}_i
-    \end{bmatrix}
-\end{equation}
-
 The full algorithm can be expressed in the below pseudocode,  
 
 \begin{algorithm}
@@ -166,3 +114,6 @@ fixed by employing a simple vectorization to take advantage of the data.
 \section{GPU Optimization}
 
 maybe include what you did for gpu optimization here.
+
+% when speaking about Felix and Jeremy's local planner we focus on the fact that the car rarely straifes away from the global planner but rather keeps going at that speed
+% no advantages for the local portion of it other than obstacle avoidance but this is not very accurate to racing.

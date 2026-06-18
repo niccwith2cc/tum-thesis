@@ -3,46 +3,140 @@
 \chapter{Autonomous Driving Systems}
 \label{chapter:background}
 
+This chapter serves to present a more detailed and technical description of previous approaches. The focus will be on their shortcomings to provide a more universal yet safe implementation
+of Autonomous Navigational Systems.
+
 \section{Modular Stack}
 \label{section:ModularStack}
 
-Give more detailed and precise information about the modular stack. Discuss further their limitations which include, modules not being able to exchange information
-upstream to find a pattern of what is a better performing parameter or characteristic. Hand-tuned, time consuming, non scalable.
-Deterministic rules and behavior.
+% which is adopted widely in industry.
+% Conversely, improvements to the modular stack have been implemented in the form of introducing neural networks for the perception and prediction tasks \cite{hu_review_2026,jain_Autonomy_20_2021}.
+% However, this has only worked to achieve partial optimization in each module rather than a fully end-to-end optimization. No longer fine tune the perception or prediction tasks. 
 
-severe compounding errors when decomposing the
-whole system into lots of smaller-scale but interpretable
-modules, as the perception uncertainty and modeling errors
-would snowball through the pipeline.
+%* Find more citations about DARPA
+The modular stack has been the conventional method for producing highly performant and tightly coupled autonomous vehicles which have the ability to autonomously navigate terrain
+since the early 2000s.
+The only way to achieve this accuracy is by painstakingly and rigorously writing more and more complex code until the desired behavior of the vehicle is reached.
+Each individual unit has its own deterministic rules and behaviors set by the programmer, with known inputs and outputs for each unit.
+Additionally, the programmer could optimize each unit separately.
+The modular stack can also suffer from compounding errors as the data moves downstream from one unit to the next, the uncertainties and modeling errors build up, causing the 
+the system to perform badly.
 
-which is adopted widely in industry 
+The most prominent indication of the limitations of the modular stack was showcased with the DARPA grand competitions of 2004 and 2005.
+Where not a single car was able to finish the 240 km course through the Mojave Desert in 2004.
+Then in 2005, 5 of the 23 cars to enter the race completed the 212 km course
+\cite{tampuu_SurveyEndtoEndDriving_2022, wang_VersatileEfficientReinforcement_2022, jain_Autonomy_20_2021, kocic_end-to-end_2019}.
 
-%? Conversely, improvements to the modular stack have been implemented in the form of introducing neural networks for the perception and prediction tasks \cite{hu_review_2026,jain_Autonomy_20_2021}.
-\section{E2E NN Stack}
+
+\section{End-to-End Neural Network Stack}
 \label{section:NNStack}
 
-Include specific examples of use cases. Discuss further about global optimal point using gradient descent methods.
+% Include specific examples of use cases. Discuss further about global optimal point using gradient descent methods.
 
-Entire pipeline is treated as a single learned task
+In the plain end-to-end neural network stack, the entire pipeline is treated as a single learned task with the goal of predicting what the car's actuators should do. 
+There are some variations to this approach with some choosing to cut off the optimization task at the planning task which produces different driving modalities: including creating
+waypoints to pass on later, etc .
+Different approaches to training: RL and IL
+
+\cite{hu_review_2026,tampuu_SurveyEndtoEndDriving_2022,wang_VersatileEfficientReinforcement_2022,kocic_end-to-end_2019,lee_autonomous_2020,hu_learning_2021,chib_recent_2023}
+
+%* describe IL here mathematically, introduce the concept, what does it aim to do, what are some examples of used IL inside this
+Imitation Learning, a machine learning paradigm, uses prerecorded human driving data to perform supervised learning on the driving model.
+The model slowly learns to mimic human driving behavior. However, this technique suffers from distribution shift, data bias, and causal confusion \cite{tampuu_SurveyEndtoEndDriving_2022,wang_VersatileEfficientReinforcement_2022}.
+These problems come from a mix of having to gather so much data, ensure that your data is diverse enough, and all of that you still cannot be sure that you will cover all scenarios.
+Especially when it comes to racing.
+
+%* describe RL here mathematically, introduce the concept, what does it aim to do, what are some examples of used RL inside this
+Reinforcement Learning is also a common choice, where the system has more ability to explore and interact with its environment.
+Through this continuous interaction with the environment it learns the most optimal behavior based on a policy rewarding system.
+For this reason, RL has incentives to explore unorthodox driving styles and behaviors that are rarer to see in real life but yet still physically possible.
+No labeled data needed or required so it is easier to set up but also suffers more from data efficiency than IL. also harder to train with high dim data \cite{wang_VersatileEfficientReinforcement_2022}
+
+Reinforcement Learning (RL) is a promising approach to address the distribution shift problem.
+It aims to maximize cumulative rewards over time by interacting with the environment, and the network makes driving decisions to obtain rewards or penalties based on its actions.
+IL cannot handle novel situations significantly different from the training dataset, RL is robust to this issue as it explores scenario under given environment \cite{chib_recent_2023}.
+
+Both are prone to interpratible and unsafe behavior
+
 
 \section{Modular Differentiable Stack}
 \label{section:ModDiffStack}
 
-Give examples on this specific topic which includes DiffStack, DIPP, etc. Talk about latest introduction on which you will built upon the work of Jeremy and Felix.
-Introduce the current working stack.
+% Speak more on the main concept of modular and differentiable stacks 
+
+% Describe work of DiffStack, and how it operates
+
+% Describe DIPP and how it operates
+
+% Conversely, the modular architecture has matured immensely since that time, where improvements to the system are now introducing neural networks for specific tasks.
+% The perception task can highly benefit from Convolution Neural Networks (CNNs) utilizing their ability to extract visual information from images and interpret them.
+% The prediction task can also be enhanced with the introduction of a Neural Network which outputs the most probable scenario.
+% However, these only achieve partial, unit specific, optimizations rather than a full system optimal point.
+
+% Give examples on this specific topic which includes DiffStack, DIPP, etc.
+
+% What have people used previously
+%? Focusing on partial combination of the architectures.
+The modular architecture has matured over the years with advancements to the pipeline which utilizes NN to handle some of the tasks individually.
+This comes after the improvements of NN and specifically Convolution Neural Networks (CNNs) enabling extraction of information from images and interpreting them.
+Hence, perception task benefit from using CNNs to read LiDAR or camera data from the car to interpret the vehicle's surroundings.
+Furthermore, the prediction task can be enhanced by feeding the data into a NN which can output the most probable scenario to occur in the next time steps. 
+Both of these tasks are now no longer hand tuned by the engineers.
+However, this approach only achieves partial, unit specific optimizations rather than finding a full system optimization.  
+
+\subsection{DiffStack}
+There are varying degrees of hybridization. DiffStack explanation which takes in 
+
+1. Prediction is trained for ego planning/control, not generic forecasting. DiffStack reports up to ~15\% higher prediction effectiveness for planning and fewer errors that actually hurt the plan.
+
+2.  Substantial gains in open-loop and closed-loop planning metrics compared with separately trained modules.
+
+Joint training beats local training — End-to-end training outperforms training prediction in isolation, even when using handcrafted “planning-aware” auxiliary losses.
+
+Keeps modularity — Still uses explicit prediction, planning, and control blocks; you get co-optimization without a black-box end-to-end network.
+
+\subsection{DIPP}
+
+Fixes the prediction-planning split — Explicitly targets the two classic modular failures: isolated prediction/planning and hand-tuned planner costs.
+Joint training beats sequential training — In both open-loop and closed-loop tests, integrated training outperforms using a separately trained prediction module — on both planning and prediction metrics.
+Planning-centric prediction — Predictions are shaped so the planner produces trajectories closer to human driving, not just lower raw forecast error.
+Learned cost function — Planner weights are learned from data instead of manually tuned, improving stability and performance (ablations show learnable components matter).
+
+\subsection{MIND}
 
 \chapter{Motion Planner}
 \label{chapter:MotionPlanner}
 
-Covering the mathematical background to understand how the sampling planner works.
+% Talk about different motion planning techniques. Evolution of motion planning in general to how we reached this current planning task.
+% Covering the mathematical background to understand how the sampling planner works.
+% Discussion on local planner? differentiable local planner?
+% Current reach of stack? what can be achieved now with all the other work having been done?
 
-Review of systems design for autonomous vehicle software.
+%* Talk about what a motion planner is, what it does specifically. Why the focus on differentiability.
 
-Discussion of training strategies?
+\section{Global vs Local Planning}
 
-Discussion on local planner? differentiable local planner?
+a general overview of global vs local planning. Include definition of global planning as a general big picture plan that the car must follow.
+In terms of racing similar to a track where a raceline is known, have good guess what to do. This is typically done offline, achieving a specific goal in mind.
 
-Current reach of stack? what can be achieved now with all the other work having been done?
+local planning is the car reacting in real time what it needs. obstacle detection, opponent in front or behind, changed racing conditions. Adapt as needed.
+Short horizon -> what is the best trajectory
+
+\section{Different Motion Planners}
+
+\subsection{Graph and Search Planners}
+
+This includes A* approaches where they discretize space and then turning them differentiable is difficult. find citations
+
+\subsection{Sampling-Based Planners}
+
+RRT trees and RRT* trees random explore, also hard to differentiate at any point.
+
+\subsection{Frenet Sampling}
+
+polynomial samplings
+
+\section{Frenet Frame}
 
 \begin{figure}[htbp]
     \centering
@@ -61,8 +155,6 @@ Current reach of stack? what can be achieved now with all the other work having 
     \caption{Track Representation}
     \label{fig:trackrep}
 \end{figure}
-
-\section{Frenet Frame}
 
 The Frenet frame of reference is often used when describing a moving particle along a differentiable curve. The use of Frenet coordinate system
 $(s, n)$ allows simpler interpretation of curved paths than using a rigid system such as the Cartesian coordinates $(x, y)$.
@@ -95,3 +187,97 @@ Where $\psi (s)$ is the heading angle, relative to the global Cartesian frame, o
 
 \chapter{DiffPlan}
 \label{chapter:DiffPlan}
+
+%* What does our specific motion planner do?
+%* How many parts is it made out of? 
+%* How can we describe it
+
+\section{Sampling Technique}
+
+The original sampling strategy for the motion planner:
+
+Starting with an initial state of the longitudinal and lateral position and velocity of the vehicle, $S_0 = [s_0, \dot{s}_0, n_0, \dot{n}_0]$, respectively.
+A set of sample trajectories are generated constrained by the initial longitudinal velocity and lateral position of the vehicle, the samples terminate at
+the end states, $S_{\text{end}, ij} = [\dot{s}_{\text{end}, i}, n_{\text{end}, j}, \dot{n}_{\text{end}, j}]$ with a specific candidate ${ij}$. The sampling
+strategy is split into first the longitudinal sample component followed by the lateral sample component. 
+
+[WARNING CHANGE LATER] % probably flip the entire description start with what we want to end with. s(t) and the big S matrix 
+
+The longitudinal sampling is initialized by discretizing the time horizon $T$ into equally spaced steps, which results in a discrete time vector. 
+Subsequently, the range of permissible longitudinal velocities $[\dot{s}_{\text{min}}, \dot{s}_{\text{max}}]$ at the trajectory's endpoint is determined, 
+constrained by the initial velocity, the target velocity, and the velocity derived from the global race line. 
+The upper bound of this range is computed as
+\begin{equation}
+    \dot{s}_{\text{max}} = \text{min}(V_{\text{max}}, \text{max}(\dot{s}_0, \dot{s}_{\text{incr}}) \cdot K_s ),
+\end{equation}
+where K is a a scaling factor that accounts for a necessary deviation from the raceline, while the velocity increment
+\begin{equation}
+    \dot{s}_{\text{incr}} = \text{min}(\dot{s}_0 + \Delta \dot{s}, \dot{s}_{rl}(T)),
+\end{equation}
+This formulation ensures that the velocity range appropriately considers the initial vehicle states, the velocity differences, and the reference trajectory.
+The velocity samples $ \{ \dot{s}_{e, i} \}_{i=0}^{N_s}$ are generated within the range, where $N_s$ denotes the number of samples. 
+Each sampled end velocity is utilized to construct a longitudinal trajectory using a quadratic polynomial,
+\begin{equation}
+    s(t) = c_0 + c_1 t + c_2 t^2 ,
+\end{equation}
+and the corresponding longitudinal velocity is given by,
+\begin{equation}
+    \dot{s}(t) = c_1 + 2c_2 t.
+\end{equation}
+The coefficient $c_0, c_1, c_2$ of the polynomial are determined by solving the linear system $A_s c_s = b_s$ with
+\begin{equation}
+    A_s = \begin{bmatrix}
+        1 & 0 & 0 \\
+        0 & 1 & 0 \\
+        0 & 1 & 2T
+    \end{bmatrix}, \quad
+    b_s = \begin{bmatrix}
+        s_0 \\
+        \dot{s}_0\\
+        \dot{s}_i
+    \end{bmatrix}.
+\end{equation}
+Where it is constrained by 3.18 and 3.19 as the initial and boundary conditions $s_0, \dot{s}_0, \dot{s}_{e,i}$.
+These coefficients ensure that the resulting polynomial maintains continuity with the initial position $s_0$ with the initial velocity $\dot{s}_0$ and a smooth transition to the sampled velocity.
+The resulting set of sampled longitudinal trajectories can be represented as a matrix $S_j \in \mathbb{R}^{N_s \times N_T \times 4}$, where each row corresponds to a distinct trajectory profile $S_i(t)$ over the time interval $[0, T]$.
+As the final velocities are particularly relevant in racing scenarios, we do not sample the end positions longitudinally [5]; instead, we adjust them according to the polynomial formulation in Eq. 3.18.
+
+For lateral sampling, a cubic polynomial is used to describe the lateral trajectory:
+\begin{equation}
+    n(t) = c_0 + c_1 t + c_2 t^2 + c_3 t^3,
+\end{equation}
+with the corresponding lateral velocity $\dot{n}(t)$ is the first derivative of the position function. 
+The polynomial coefficients $c_n = [c_0, c_1, c_2, c_3]^T$ are calculated by solving linear equations $A_n c_n = b_n$, where the coefficient matrix $A_n$ defined as
+\begin{equation}
+    A_n = \begin{bmatrix}
+        1 & 0 & 0 & 0\\
+        0 & 1 & 0 & 0\\
+        1 & T & T^2 & T^3\\
+        0 & 1 & 2T & 3T^2
+    \end{bmatrix}, \quad
+    b_n = \begin{bmatrix}
+        n_0 \\
+        \dot{s}_0\\
+        n_{e, j} \\
+        \dot{n}_{e, j}
+    \end{bmatrix}.
+\end{equation}
+The lateral positions are sampled within the track boundaries,
+\begin{equation}
+    n_{e,j} \in \left[n_r(s_{e, i}) + \frac{d_w}{2} + \Delta_{\text{safety}}, n_l(s_{e, i}) - \frac{d_w}{2} - \Delta_{\text{safety}}\right],
+\end{equation}
+considering the vehicle width $d_w$ and safety distance $\Delta_{\text{safety}}$.
+The interval is divided into positions near the raceline (with denser sampling and includes the terminal racing position $n_{rl, i} (T)$) and those farther away, with the total number of samples is denoted as $N_n$.
+The end lateral velocity is chosen based on the longitudinal velocity, calculated as
+\begin{equation}
+    \dot{n}_{e,j} = \dot{s}_{e,i} \sin (\chi),
+\end{equation}
+where $\chi$ is the heading in the local frame. 
+The lateral trajectory samples are stored accordingly to the corresponding longitudinal trajectories, resulting in a state trajectory matrix of $S \in \mathbb{R}^{N_s \cdot N_n \times N_T \times 4}$.
+
+%? LSTM: we introduce the prediction module to allow the planning algorithm to see ahead and prolong the valid period of the trajectory. [Integrating Algorithmic Sampling-Based Motion Planning]
+
+%? local vs global:
+%? The global part is often called the mission, in which the long-term vehicle trajectory is decided. 
+%? In racing scenarios, this long-term trajectory is optimally calculated based on the reconstructed map of the known racetrack. 
+%? Local/online planners, on the other hand, are what make these applications critical as unexpected obstacles and other dangerous situations might compromise successful navigation [GPU implementation of the Frenet Path Planner]
