@@ -18,20 +18,20 @@ These flaws often stem from the two main architectural structures that researche
     \centering
     \begin{tikzpicture}
         \node[name=sensors, shape=rectangle, draw=black, fill=gray!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (4,-2.3) {Sensors};
-        \node[name=perc, shape=rectangle, draw=blue, fill=blue!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (2, 0) {Perception};
+        \node[name=perc, shape=rectangle, draw=yellow, fill=yellow!30, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (2, 0) {Perception};
         \draw[->, black, very thick] (sensors.north) -- node[midway, above] {Data} (1.2, -2.3) -- (1.2, 0) -- (perc.north);
-        \node[name=pred, shape=rectangle, draw=blue, fill=blue!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (5.5, 0) {Prediction};
-        \draw[->, blue, very thick] (perc.320) -- node[midway, above] {Environment} (pred.40);
-        \draw[->, blue, very thick] (perc.220) -- node[midway, below] {Ego Pose} (pred.140);
+        \node[name=pred, shape=rectangle, draw=orange, fill=orange!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (5.5, 0) {Prediction};
+        \draw[->, yellow, very thick] (perc.320) -- node[midway, above, black] {Environment} (pred.40);
+        \draw[->, yellow, very thick] (perc.220) -- node[midway, below, black] {Ego Pose} (pred.140);
         \node[name=plan, shape=rectangle, draw=blue, fill=blue!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (9.5, 0) {Planning};
-        \draw[->, blue, very thick] (pred.south) -- node[midway, above] {State Estimation} (plan.north);
-        \node[name=ctrl, shape=rectangle, draw=blue, fill=blue!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (12.5, 0) {Control};
+        \draw[->, orange, very thick] (pred.south) -- node[midway, above] {State Estimation} (plan.north);
+        \node[name=ctrl, shape=rectangle, draw=green, fill=green!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (12.5, 0) {Control};
         \draw[->, blue, very thick] (plan.south) -- node[midway, above] {Trajectory} (ctrl.north);
         \node[name=act, shape=rectangle, draw=black, fill=gray!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (10.5,-2.3) {Actuators};
         \draw[->, black, very thick] (ctrl.south) -- (13.5, 0) -- (13.5, -2.3) -- node[midway, above] {Actuation} (act.south);
     \end{tikzpicture}
     %* fix citation
-    \caption{An example of a possible implementation of the modular architecture for autonomous vehicles. Module units in blue and vehicle hardware in grey. Inspired by \cite{ogretmen_local_2025}}.
+    \caption{An example of a possible implementation of the modular architecture for autonomous vehicles. Module units in blue and vehicle hardware in grey. Inspired by \cite{ogretmen_local_2025}.}
     \label{fig:modulararch}
 \end{figure}
 
@@ -69,6 +69,8 @@ The goal of this method is to achieve an end-to-end differentiable hybrid stack;
 Hence upstream components are trained to improve the overall performance of the model rather than performing a local optimization of each unique module.
 Examples of this architecture in urban autonomous driving include DIPP \cite{huang_DifferentiableIntegratedMotion_2024} and DiffStack \cite{karkus_DiffStackDifferentiableModular_2022}, which demonstrate that joint gradient-based optimization outperforms the stack of individually optimized modules.   
 Additionally, Jahncke \cite{jahncke_MINDStackModularInterpretable_2025} describes the Modular, Interpretable, End-to-End Differentiable (MIND) software stack, which applies the same principle of co-optimizing differentiable localization and control modules on the RoboRacer platform.
+
+%* focus on the transition to this thesis
 Building on the work of MIND, DiffPlan \cite{swadiryus_DifferentiableMotionPlanning_2025, koch_DifferentiableInterpretablePath_2025}, focused on implementing a differentiable local motion planner which generates a series of possible trajectories and selects the most optimal one.
 Although, this additional work materialized into a more computationally intensive effort than the on-board embedded system on the RoboRacer vehicle could handle.
 Henceforth, this thesis aims to computationally optimize DiffPlan to make it run faster, with a focus on possible vectorizations that can be achieved. 
