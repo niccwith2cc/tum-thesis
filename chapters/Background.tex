@@ -3,40 +3,43 @@
 \chapter{Autonomous Driving Systems}
 \label{chapter:background}
 
+%* fix the phrasing and continue to expand the current idea
 This chapter serves to present a more detailed and technical description of previous approaches. The focus will be on their shortcomings to provide a more universal yet safe implementation
 of Autonomous Navigational Systems.
 
 \section{Modular Stack}
 \label{section:ModularStack}
+%* fix and check all citations
 
-% which is adopted widely in industry.
-% Conversely, improvements to the modular stack have been implemented in the form of introducing neural networks for the perception and prediction tasks \cite{hu_review_2026,jain_Autonomy_20_2021}.
-% However, this has only worked to achieve partial optimization in each module rather than a fully end-to-end optimization. No longer fine tune the perception or prediction tasks. 
+Since the early 2000s, researchers and industry manufacturers have adopted the modular stack as the conventional architecture for autonomous vehicles \cite{jain_Autonomy_20_2021, wang_VersatileEfficientReinforcement_2022,tampuu_SurveyEndtoEndDriving_2022}.
+The Defense Advanced Research Projects Agency (DARPA) Grand Challenges of 2004 and 2005 accelerated mainstream adoption of the modular stack when teams demonstrated that the modular pipeline could autonomously navigate a demanding off-road desert course within a prescribed time limit \cite{tampuu_SurveyEndtoEndDriving_2022,wang_VersatileEfficientReinforcement_2022,thrun_stanley_2006}.
+Engineers described the challenge as solving a software problem, defining deterministic rules and interfaces for each step of the cohesive pipeline \cite{thrun_stanley_2006, montemerlo_winning_2006}.
 
-%* Find more citations about DARPA
-The modular stack has been the conventional method for producing highly performant and tightly coupled autonomous vehicles which have the ability to autonomously navigate terrain
-since the early 2000s.
-The only way to achieve this accuracy is by painstakingly and rigorously writing more and more complex code until the desired behavior of the vehicle is reached.
-Each individual unit has its own deterministic rules and behaviors set by the programmer, with known inputs and outputs for each unit.
-Additionally, the programmer could optimize each unit separately.
-The modular stack can also suffer from compounding errors as the data moves downstream from one unit to the next, the uncertainties and modeling errors build up, causing the 
-the system to perform badly.
+A robot named Stanley became the first unmanned vehicle to traverse the 212\,km course at the 2005 DARPA Grand Challenge \cite{tampuu_SurveyEndtoEndDriving_2022, hoffmann_AutonomousAutomobileTrajectory_2007, thrun_stanley_2006}.
+Stanley's software pipeline is described as comprising of approximately 30 modules organized into six functional layers \cite{tampuu_SurveyEndtoEndDriving_2022, thrun_stanley_2006, montemerlo_winning_2006}.
+Fusing input data from various cameras, laser range finders, and other positional sensors, the pipeline routed this stream through the perception layer to construct the sorrounding environment and the vehicle's orientation within it \cite{thrun_stanley_2006}.
+%? There was no global path planning involved (change: the role of Stanley’s path planner is primarily local obstacle avoidance.)
+Achieving high-speed driving yet careful local obstacle avoidance through extensive tweaking: refining software components iteratively, and tuning modules in isolation until the full vehicle exhibited the desired behavior \cite{thrun_stanley_2006, montemerlo_winning_2006}.
+This module based development strategy offers clear interpretability and allows engineers to optimize individual units against well-defined inputs and outputs.
+%? Talk about more recent benefit of modular stack check Jeremy paper
 
-The most prominent indication of the limitations of the modular stack was showcased with the DARPA grand competitions of 2004 and 2005.
-Where not a single car was able to finish the 240 km course through the Mojave Desert in 2004.
-Then in 2005, 5 of the 23 cars to enter the race completed the 212 km course
-\cite{tampuu_SurveyEndtoEndDriving_2022, wang_VersatileEfficientReinforcement_2022, jain_Autonomy_20_2021, kocic_end-to-end_2019}.
+However, The DARPA Grand Challenges additionally illustrated the limitations of this approach.
+In the 2004 challenge, none of the competing vehicles completed more than 5\% of the course through the Mojave Desert \cite{ogretmen_local_2025, thrun_stanley_2006, montemerlo_winning_2006}.
+One year later, only five of the 23 entrants crossed the finish line, indicating that reliable completion of the course still required complex and meticulous tuning across the entire software pipeline \cite{tampuu_SurveyEndtoEndDriving_2022,wang_VersatileEfficientReinforcement_2022,jain_Autonomy_20_2021,kocic_end-to-end_2019,thrun_stanley_2006}.
+This narrow margin of success is indicative of the error propagation within the modular stack, where modeling approximations and estimation uncertainties accumulate downstream and compound to degrade planning and control performance \cite{jain_Autonomy_20_2021,tampuu_SurveyEndtoEndDriving_2022,wang_VersatileEfficientReinforcement_2022,kocic_end-to-end_2019}.
 
+% \cite{gonzalez_ReviewMotionPlanning_2016,hoffmann_AutonomousAutomobileTrajectory_2007,ogretmen_local_2025,werling_OptimalTrajectoryGeneration_2010,rosero_integrating_2024,thrun_stanley_2006,urmson_autonomous_2008}
+%? More recently, hybrid architectures have begun to integrate modular perception and control pipelines with learned planning components, combining the debuggability of the classical stack with data-driven adaptability \cite{rosero_integrating_2024}.
 
 \section{End-to-End Neural Network Stack}
 \label{section:NNStack}
 
 % Include specific examples of use cases. Discuss further about global optimal point using gradient descent methods.
+% There are some variations to this approach with some choosing to cut off the optimization task at the planning task which produces different driving modalities: including creating
+% waypoints to pass on later, etc .
 
 In the plain end-to-end neural network stack, the entire pipeline is treated as a single learned task with the goal of predicting what the car's actuators should do. 
-There are some variations to this approach with some choosing to cut off the optimization task at the planning task which produces different driving modalities: including creating
-waypoints to pass on later, etc .
-Different approaches to training: RL and IL
+Most commonly 
 
 \cite{hu_review_2026,tampuu_SurveyEndtoEndDriving_2022,wang_VersatileEfficientReinforcement_2022,kocic_end-to-end_2019,lee_autonomous_2020,hu_learning_2021,chib_recent_2023}
 
