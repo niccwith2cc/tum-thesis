@@ -17,7 +17,7 @@ Engineers described the challenge as solving a software problem, defining determ
 
 A robot named Stanley became the first unmanned vehicle to traverse the 212\,km course at the 2005 DARPA Grand Challenge \cite{tampuu_SurveyEndtoEndDriving_2022, hoffmann_AutonomousAutomobileTrajectory_2007, thrun_stanley_2006}.
 Stanley's software pipeline is described as comprising of approximately 30 modules organized into six functional layers \cite{tampuu_SurveyEndtoEndDriving_2022, thrun_stanley_2006, montemerlo_winning_2006}.
-Fusing input data from various cameras, laser range finders, and other positional sensors, the pipeline routed this stream through the perception layer to construct the sorrounding environment and the vehicle's orientation within it \cite{thrun_stanley_2006}.
+Fusing input data from various cameras, laser range finders, and other positional sensors, the pipeline routed this stream through the perception layer to construct the surrounding environment and the vehicle's orientation within it \cite{thrun_stanley_2006}.
 %? There was no global path planning involved (change: the role of Stanley’s path planner is primarily local obstacle avoidance.)
 Achieving high-speed driving yet careful local obstacle avoidance through extensive tweaking: refining software components iteratively, and tuning modules in isolation until the full vehicle exhibited the desired behavior \cite{thrun_stanley_2006, montemerlo_winning_2006}.
 This module based development strategy offers clear interpretability and allows engineers to optimize individual units against well-defined inputs and outputs.
@@ -25,42 +25,56 @@ This module based development strategy offers clear interpretability and allows 
 
 However, The DARPA Grand Challenges additionally illustrated the limitations of this approach.
 In the 2004 challenge, none of the competing vehicles completed more than 5\% of the course through the Mojave Desert \cite{ogretmen_local_2025, thrun_stanley_2006, montemerlo_winning_2006}.
-One year later, only five of the 23 entrants crossed the finish line, indicating that reliable completion of the course still required complex and meticulous tuning across the entire software pipeline \cite{tampuu_SurveyEndtoEndDriving_2022,wang_VersatileEfficientReinforcement_2022,jain_Autonomy_20_2021,kocic_end-to-end_2019,thrun_stanley_2006}.
+One year later, only five of the 23 entrants crossed the finish line, indicating that reliable completion of the course still required complex and meticulous tuning for the specific race across the entire software pipeline \cite{tampuu_SurveyEndtoEndDriving_2022,wang_VersatileEfficientReinforcement_2022,jain_Autonomy_20_2021,kocic_end-to-end_2019,thrun_stanley_2006}.
 This narrow margin of success is indicative of the error propagation within the modular stack, where modeling approximations and estimation uncertainties accumulate downstream and compound to degrade planning and control performance \cite{jain_Autonomy_20_2021,tampuu_SurveyEndtoEndDriving_2022,wang_VersatileEfficientReinforcement_2022,kocic_end-to-end_2019}.
-
 % \cite{gonzalez_ReviewMotionPlanning_2016,hoffmann_AutonomousAutomobileTrajectory_2007,ogretmen_local_2025,werling_OptimalTrajectoryGeneration_2010,rosero_integrating_2024,thrun_stanley_2006,urmson_autonomous_2008}
 %? More recently, hybrid architectures have begun to integrate modular perception and control pipelines with learned planning components, combining the debuggability of the classical stack with data-driven adaptability \cite{rosero_integrating_2024}.
 
 \section{End-to-End Neural Network Stack}
 \label{section:NNStack}
+% \cite{hu_review_2026,tampuu_SurveyEndtoEndDriving_2022,wang_VersatileEfficientReinforcement_2022,kocic_end-to-end_2019,lee_autonomous_2020,hu_learning_2021,chib_recent_2023}
 
-% Include specific examples of use cases. Discuss further about global optimal point using gradient descent methods.
-% There are some variations to this approach with some choosing to cut off the optimization task at the planning task which produces different driving modalities: including creating
-% waypoints to pass on later, etc .
+In the end-to-end neural network stack, the entire driving pipeline is collapsed into a single learned task that maps raw sensor data directly to low-level actuator commands or short-horizon trajectories \cite{hu_review_2026, tampuu_SurveyEndtoEndDriving_2022, hu_learning_2021, wang_VersatileEfficientReinforcement_2022, chib_recent_2023}.
+This learning based approach has surfaced due to recent innovations of Deep Neural Networks (DNNs) and is often motivated as a solution for the tedious refining process that characterizes modular pipelines \cite{tampuu_SurveyEndtoEndDriving_2022, kocic_end-to-end_2019, hu_learning_2021}.
+Rather than relying on hand-crafted interfaces between modules, the network is expected to discover its own latent representations of the task and jointly optimize towards a single downstream objective \cite{tampuu_SurveyEndtoEndDriving_2022, hu_learning_2021, chib_recent_2023}.
+In literature, end-to-end driving models are predominantly trained under one of two paradigms: Imitation Learning (IL) and Reinforcement Learning (RL), which are discussed in turn below \cite{hu_review_2026, tampuu_SurveyEndtoEndDriving_2022, wang_VersatileEfficientReinforcement_2022, chib_recent_2023}.
 
-In the plain end-to-end neural network stack, the entire pipeline is treated as a single learned task with the goal of predicting what the car's actuators should do. 
-Most commonly 
+\subsection{Imitation Learning}
+\label{subsection:ImitationLearning}
 
-\cite{hu_review_2026,tampuu_SurveyEndtoEndDriving_2022,wang_VersatileEfficientReinforcement_2022,kocic_end-to-end_2019,lee_autonomous_2020,hu_learning_2021,chib_recent_2023}
+Imitation Learning (IL) frames driving as a supervised learning problem in which the model is trained to reproduce the behavior of an expert human demonstrator \cite{tampuu_SurveyEndtoEndDriving_2022, hu_review_2026, chib_recent_2023}.
+During data collection, sensor observations and corresponding expert actions are recorded in pairs.
+Convolution Neural Networks (CNNs) are commonly paired with IL models, as they are well suited to processing the high-dimensional visual data produced by the vehicle's cameras \cite{kocic_end-to-end_2019, lee_autonomous_2020, hu_learning_2021}.
+CNNs extract spatial features from raw images and condense them into a compact representation that captures the driving scene, which is then mapped onto the corresponding driving action \cite{kocic_end-to-end_2019, hu_learning_2021}.
+The network is then optimized to minimize the discrepancy between its own predicted actions and those of the expert over the collected dataset \cite{hu_review_2026, tampuu_SurveyEndtoEndDriving_2022}.
+At inference time, the learned policy emits an action based on the current surrounding state, ideally generalizing the demonstrated behavior to previously unseen situations \cite{tampuu_SurveyEndtoEndDriving_2022, kocic_end-to-end_2019}.
+Despite this conceptual simplicity, purely imitative policies are well known to suffer from several intertwined limitations.
+Consider a driving decision made by the model that directed the car to a situation which was not covered by the initial expert dataset causing the model to malfunction, this is referred to as distribution shift \cite{tampuu_SurveyEndtoEndDriving_2022, wang_VersatileEfficientReinforcement_2022}.
+Additionally, data bias and causal confusion describe the possibility of the model to latch onto spurious correlations in the expert demonstrations rather than the true causal structure of the driving task \cite{hu_review_2026, tampuu_SurveyEndtoEndDriving_2022, wang_VersatileEfficientReinforcement_2022, chib_recent_2023}.
+These issues are exacerbated by the practical difficulty of curating datasets that are simultaneously large, balanced, and broad enough to cover valid driving scenarios \cite{wang_VersatileEfficientReinforcement_2022, chib_recent_2023}.
+This obstacle is particularly pronounced in autonomous racing, where it is nearly impossible to collect data on all possible racing scenarios which could occur, this translates into brittle behavior at the very operating points that matter most on track \cite{wang_VersatileEfficientReinforcement_2022, ogretmen_local_2025}.
 
-%* describe IL here mathematically, introduce the concept, what does it aim to do, what are some examples of used IL inside this
-Imitation Learning, a machine learning paradigm, uses prerecorded human driving data to perform supervised learning on the driving model.
-The model slowly learns to mimic human driving behavior. However, this technique suffers from distribution shift, data bias, and causal confusion \cite{tampuu_SurveyEndtoEndDriving_2022,wang_VersatileEfficientReinforcement_2022}.
-These problems come from a mix of having to gather so much data, ensure that your data is diverse enough, and all of that you still cannot be sure that you will cover all scenarios.
-Especially when it comes to racing.
+\subsection{Reinforcement Learning}
+\label{subsection:ReinforcementLearning}
+Reinforcement Learning (RL), in contrast, formulates end-to-end driving as a sequential decision-making problem \cite{wang_VersatileEfficientReinforcement_2022, chib_recent_2023, hu_review_2026}.
+The agent learns a policy by interacting with its environment and receiving rewards based on actions which align with the desired behavior \cite{wang_VersatileEfficientReinforcement_2022, chib_recent_2023}.
+Through repeated trial-and-error, the agent gradually converges toward a policy that maximizes the expected cumulative reward, without requiring a curated dataset \cite{wang_VersatileEfficientReinforcement_2022, chib_recent_2023}.
+Because the agent actively explores its state-action space, RL is robust to the distribution-shift issue inherent to IL \cite{chib_recent_2023, wang_VersatileEfficientReinforcement_2022}.
+In principle, it can also discover unconventional maneuvers that lie outside the support of human driving behavior but are nonetheless dynamically feasible \cite{chib_recent_2023, wang_VersatileEfficientReinforcement_2022}.
+This property is particularly attractive for autonomous racing, where exploiting the full capacity of the vehicle is essential \cite{ogretmen_local_2025}.
+%* fix example criteria
+Recent work has shown that reward-shaped exploration can recover aggressive yet safe racing styles, and that RL agents can even be used to bias sampling-based planners toward feasible regions of the action space \cite{ogretmen_local_2025, moller_LearningSampleReinforcement2025}.
+The absence of labeled data further lowers the barrier to setting up new training scenarios, since reward signals can typically be derived directly from simulator state \cite{wang_VersatileEfficientReinforcement_2022}.
+However, RL suffers from poor sample efficiency.
+%* check issue
+RL policies typically demand orders of magnitude more environment interactions than IL requires demonstrations, which in turn ties their development to high-fidelity simulators and considerable computational budgets \cite{wang_VersatileEfficientReinforcement_2022, hu_review_2026}.
+%* check issue
+Furthermore, scaling RL to high-dimensional sensory inputs such as raw camera or LiDAR streams remains notoriously difficult \cite{wang_VersatileEfficientReinforcement_2022}.
+Finally, designing reward functions that faithfully capture the multi-objective and safety-critical nature of driving is equally challenging, as poorly shaped rewards can readily induce reward hacking or unsafe exploration \cite{wang_VersatileEfficientReinforcement_2022, chib_recent_2023}.
 
-%* describe RL here mathematically, introduce the concept, what does it aim to do, what are some examples of used RL inside this
-Reinforcement Learning is also a common choice, where the system has more ability to explore and interact with its environment.
-Through this continuous interaction with the environment it learns the most optimal behavior based on a policy rewarding system.
-For this reason, RL has incentives to explore unorthodox driving styles and behaviors that are rarer to see in real life but yet still physically possible.
-No labeled data needed or required so it is easier to set up but also suffers more from data efficiency than IL. also harder to train with high dim data \cite{wang_VersatileEfficientReinforcement_2022}
-
-Reinforcement Learning (RL) is a promising approach to address the distribution shift problem.
-It aims to maximize cumulative rewards over time by interacting with the environment, and the network makes driving decisions to obtain rewards or penalties based on its actions.
-IL cannot handle novel situations significantly different from the training dataset, RL is robust to this issue as it explores scenario under given environment \cite{chib_recent_2023}.
-
-Both are prone to interpratible and unsafe behavior
-
+%* rewrite this to have shorter sentences, and include high volume data collection or large training time to be included.
+Common to both paradigms is the recurring concern that the resulting policies remain difficult to interpret and to certify against explicit safety requirements, as their decision-making is encoded implicitly within the weights of a deep network rather than in human-readable rules \cite{tampuu_SurveyEndtoEndDriving_2022, wang_VersatileEfficientReinforcement_2022, hu_review_2026, jain_Autonomy_20_2021, jahncke_MINDStackModularInterpretable_2025}.
+This opacity, combined with the data and compute demands outlined above, motivates the hybrid differentiable architectures discussed in the following section, which seek to retain the structural transparency of the modular stack while still benefiting from learned, jointly optimized components.
 
 \section{Modular Differentiable Stack}
 \label{section:ModDiffStack}
