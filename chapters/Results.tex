@@ -12,6 +12,21 @@
     \includegraphics[width=\textwidth]{images/grouped_comparison_iterations.png}
 \end{figure}
 
+\begin{table}[htbp]
+    \centering
+    \caption{Drive Topic Publish Frequency}
+    \label{tab:runtime-comparison}
+    \begin{tabular}{lcc}
+        \hline
+        Algorithm & Runtime (ms) & Speedup \\
+        \hline
+        Baseline       &   $13.2 \pm 0.12 $ Hz  & 1.00 \\
+        Vectorized     &   $34.12 \pm 0.54 $ Hz & 2.59 \\
+        Spatial        &   $30.66 \pm 0.50 $ Hz & 2.33 \\
+        \hline
+    \end{tabular}
+\end{table}
+
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{images/speedup_iterations.png}
@@ -24,3 +39,122 @@
     \centering
     \includegraphics[width=\textwidth]{images/planning_scaling.png}
 \end{figure}
+
+\section{Local Sampling Planner}
+
+\subsection{Simulation Runs}
+
+\subsubsection{FTM Oval}
+
+\begin{figure}[htbp]
+\centering
+\begin{subfigure}{.49\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{images/ftm_oval_sim_0.png}
+%   \caption{A subfigure}
+  \label{fig:sub1}
+\end{subfigure}
+\begin{subfigure}{.49\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{images/ftm_oval_sim_0_n.png}
+%   \caption{A subfigure}
+  \label{fig:sub2}
+\end{subfigure}
+\caption{A figure with two subfigures}
+\label{fig:test}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{subfigure}{.49\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{images/ftm_oval_sim_9.png}
+%   \caption{A subfigure}
+%   \label{fig:sub1}
+\end{subfigure}
+\begin{subfigure}{.49\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{images/ftm_oval_sim_9_n.png}
+%   \caption{A subfigure}
+%   \label{fig:sub2}
+\end{subfigure}
+% \caption{A figure with two subfigures}
+% \label{fig:test}
+\end{figure}
+
+\begin{table}[hbp]
+    \centering
+    \caption{Lap Time Comparison While Training}
+    \label{tab:lap}
+    \begin{tabular}{llll}
+        \hline
+        Lap & Baseline & Vectorized & Spatial \\
+        \hline
+        0   &  8.84s   &   7.53s    &  5.17s  \\
+        9   &  7.25s   &   5.76s    &  3.79s  \\
+        \hline
+    \end{tabular}
+\end{table}
+
+%! add table for abs sum value of the lateral separation
+
+\subsubsection{Yas Marina}
+
+\begin{figure}[htbp]
+\centering
+\begin{subfigure}{.49\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{images/yas_marina_sim_0.png}
+%   \caption{A subfigure}
+%   \label{fig:sub1}
+\end{subfigure}
+\begin{subfigure}{.49\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{images/yas_marina_sim_0_n.png}
+%   \caption{A subfigure}
+%   \label{fig:sub2}
+\end{subfigure}
+% \caption{A figure with two subfigures}
+% \label{fig:test}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{subfigure}{.49\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{images/yas_marina_sim_9.png}
+%   \caption{A subfigure}
+%   \label{fig:sub1}
+\end{subfigure}
+\begin{subfigure}{.49\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{images/yas_marina_sim_9_n.png}
+%   \caption{A subfigure}
+%   \label{fig:sub2}
+\end{subfigure}
+% \caption{A figure with two subfigures}
+% \label{fig:test}
+\end{figure}
+
+\begin{table}[hbp]
+    \centering
+    \caption{Lap Time Comparison While Training}
+    \label{tab:lap2}
+    \begin{tabular}{llll}
+        \hline
+        Lap & Baseline & Vectorized & Spatial \\
+        \hline
+        0   &  25.86s &    28.25s &        15.87s \\
+        9   &   24.29s &    28.88s &        14.38s \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\subsubsection{Austria Track}
+
+
+
+\subsection{Real Runs}
+
+
+
