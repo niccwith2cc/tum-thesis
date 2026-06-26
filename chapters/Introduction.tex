@@ -2,38 +2,12 @@
 \chapter{Introduction}
 \label{chapter:Introduction}
 
-% Introducing topics such as autonomous driving, what is it, how is it used currently, what are its current limitations. Introducing specific topic of this chapter
-% including autonomous racing, and how is it achieved, what are some benefits. Include examples on modular and full differentiable and how we need to link them together
-% to have something interpretable yet still computationally efficient. Talk about the common aspects of the differentiable and modular design of DiffPlan and conclude with
-% discussing the steps of DiffPlan (perception, prediction, planning, and control). Finally, talk about the planners, discuss what planner we already have and what we are
-% doing to it (optimization) and the planner we are testing now against it. Talk about the rest of the paper after.
-
-With the continued advancements of Artificial Intelligence, interest in self navigating automated robots has dramatically increased, reflecting their growing role as a safe and efficient solution for traversing complex industrial environments \cite{keith_review_2024, zghair_one_2021, loganathan_systematic_2023}.
+With the continued advancements of artificial intelligence, interest in self navigating automated robots has dramatically increased, reflecting their growing role as a safe and efficient solution for traversing complex industrial environments \cite{keith_review_2024, zghair_one_2021, loganathan_systematic_2023}.
 Furthermore, vehicle manufacturers are now extending this interest to the consumer market with the development of fully Autonomous Vehicles (AVs) \cite{hu_review_2026}.
 Companies such as Waymo and Baidu already operate fully autonomous taxi services in a number of cities in the United States and China.
 Several announcements have also indicated that these services will extend to European countries such as England, Switzerland, and Luxembourg \cite{saether_recommendations_2026}.
 Unfortunately, as revolutionary as autonomous mobile robots are, they are not without their flaws.
 These flaws often stem from the two main architectural structures that researchers utilize to develop and train the autonomous driving algorithms for these vehicles: the modular architecture and the end-to-end neural network architecture \cite{jain_Autonomy_20_2021,jahncke_MINDStackModularInterpretable_2025, huang_DifferentiableIntegratedMotion_2024, karkus_DiffStackDifferentiableModular_2022}.
-\begin{figure}[htb]
-    \centering
-    \begin{tikzpicture}
-        \node[name=sensors, shape=rectangle, draw=black, fill=gray!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (4,-2.3) {Sensors};
-        \node[name=perc, shape=rectangle, draw=yellow, fill=yellow!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (2, 0) {Perception};
-        \draw[->, black, very thick] (sensors.north) -- node[midway, above] {Data} (1.2, -2.3) -- (1.2, 0) -- (perc.north);
-        \node[name=pred, shape=rectangle, draw=orange, fill=orange!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (5.5, 0) {Prediction};
-        \draw[->, yellow, very thick] (perc.320) -- node[midway, above, black] {Environment} (pred.40);
-        \draw[->, yellow, very thick] (perc.220) -- node[midway, below, black] {Ego Pose} (pred.140);
-        \node[name=plan, shape=rectangle, draw=blue, fill=blue!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (9.5, 0) {Planning};
-        \draw[->, orange, very thick] (pred.south) -- node[midway, above] {State Estimation} (plan.north);
-        \node[name=ctrl, shape=rectangle, draw=green, fill=green!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (12.5, 0) {Control};
-        \draw[->, blue, very thick] (plan.south) -- node[midway, above] {Trajectory} (ctrl.north);
-        \node[name=act, shape=rectangle, draw=black, fill=gray!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (10.5,-2.3) {Actuators};
-        \draw[->, black, very thick] (ctrl.south) -- (13.5, 0) -- (13.5, -2.3) -- node[midway, above] {Actuation} (act.south);
-    \end{tikzpicture}
-    %* fix citation
-    \caption{An example of a possible implementation of the modular architecture for autonomous vehicles. Module units in blue and vehicle hardware in grey. Inspired by \cite{ogretmen_local_2025}.}
-    \label{fig:modulararch}
-\end{figure}
 
 The modular architecture, also called a modular stack, relies on imposing human-written rules to dictate the vehicle's behavior \cite{hu_review_2026, jain_Autonomy_20_2021, jahncke_MINDStackModularInterpretable_2025, tampuu_SurveyEndtoEndDriving_2022, wang_VersatileEfficientReinforcement_2022}.
 As seen in Figure \ref{fig:modulararch}, the stack generally consists of interconnected functional units.
@@ -44,8 +18,29 @@ The prediction unit then estimates future states based on an end goal, such as p
 This forecast allows the planning unit to compute a feasible trajectory which the ego vehicle can perform safely.
 Ultimately, the control unit takes this trajectory and transfers commands to the car.
 
+\begin{figure}[hb]
+    \centering
+    \begin{tikzpicture}
+        \node[name=sensors, shape=rectangle, draw=black, fill=gray!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (4,-2.3) {Sensors};
+        \node[name=perc, shape=rectangle, draw=yellow, fill=yellow!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (2, 0) {Perception};
+        \draw[->, black, very thick] (sensors.north) -- node[midway, above] {Data} (1.2, -2.3) -- (1.2, 0) -- (perc.north);
+        \node[name=pred, shape=rectangle, draw=orange, fill=orange!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (5.5, 0) {Prediction};
+        \draw[->, yellow, very thick] (perc.320) -- node[midway, above, black] {Environment} (pred.40);
+        \draw[->, yellow, very thick] (perc.220) -- node[midway, below, black] {Ego Pose} (pred.140);
+        \node[name=plan, shape=rectangle, draw=blue, fill=blue!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (9.5, 0) {Planning};
+        \draw[->, orange, very thick] (pred.south) -- node[midway, above, black] {State Estimation} (plan.north);
+        \node[name=ctrl, shape=rectangle, draw=green, fill=green!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (12.5, 0) {Control};
+        \draw[->, blue, very thick] (plan.south) -- node[midway, above, black] {Trajectory} (ctrl.north);
+        \node[name=act, shape=rectangle, draw=black, fill=gray!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (10.5,-2.3) {Actuators};
+        \draw[->, black, very thick] (ctrl.south) -- (13.5, 0) -- (13.5, -2.3) -- node[midway, above] {Actuation} (act.south);
+    \end{tikzpicture}
+    %* fix citation
+    \caption{An example of a possible implementation of the modular architecture for autonomous vehicles. Module units in blue and vehicle hardware in grey. Inspired by \cite{ogretmen_local_2025}.}
+    \label{fig:modulararch}
+\end{figure}
+
 On the one hand, this downstream pipeline offers a highly interpretable information path for the engineer.
-It facilitates modifying the underlying rules of the cost function and ensures developers robustly implement well-defined safety measures \cite{jain_Autonomy_20_2021, jahncke_MINDStackModularInterpretable_2025, karkus_DiffStackDifferentiableModular_2022, tampuu_SurveyEndtoEndDriving_2022, wang_VersatileEfficientReinforcement_2022}.
+It facilitates modifying the underlying behavior of the vehicle and ensures developers robustly implement well-defined safety measures \cite{jain_Autonomy_20_2021, jahncke_MINDStackModularInterpretable_2025, karkus_DiffStackDifferentiableModular_2022, tampuu_SurveyEndtoEndDriving_2022, wang_VersatileEfficientReinforcement_2022}.
 On the other hand, these rule-based systems depend heavily on experts who must continually formulate new rules to optimize the stack's overall cost function \cite{jain_Autonomy_20_2021, karkus_DiffStackDifferentiableModular_2022, wang_VersatileEfficientReinforcement_2022}.
 Because these systems are inherently unable to generalize their behavior effectively, encountering edge cases or expanding operations into new locations necessitates extensive re-tuning.
 This limitation introduces substantial scalability bottlenecks \cite{hu_review_2026, jain_Autonomy_20_2021, huang_DifferentiableIntegratedMotion_2024, karkus_DiffStackDifferentiableModular_2022}.
@@ -62,25 +57,48 @@ Another drawback of neural networks is that their learned decision-making proces
 This lack of transparency conflicts with implementing explicit safety constrains and traffic regulations \cite{hu_review_2026, huang_DifferentiableIntegratedMotion_2024, karkus_DiffStackDifferentiableModular_2022, tampuu_SurveyEndtoEndDriving_2022, wang_VersatileEfficientReinforcement_2022}.
 Consequently, although end-to-end models exhibit strong generalization capabilities, their unpredictability and limited interpretability present a significant hurdle for the safe deployment of consumer autonomous vehicles.
 
-%* fix the phrasing, not professional enough 
 A middle-of-the-road approach is now gaining traction in literature, that combines the modular stack with an end-to-end neural network \cite{jahncke_MINDStackModularInterpretable_2025, huang_DifferentiableIntegratedMotion_2024, karkus_DiffStackDifferentiableModular_2022, wang_VersatileEfficientReinforcement_2022, swadiryus_DifferentiableMotionPlanning_2025, koch_DifferentiableInterpretablePath_2025}.
 This hybrid approach retains the structure and interpretability of modular pipelines while integrating the learnable components of a neural network.
 The goal of this method is to achieve an end-to-end differentiable hybrid stack; where gradients from downstream task losses can be backpropagated through intermediate modules.
 Hence upstream components are trained to improve the overall performance of the model rather than performing a local optimization of each unique module.
-Examples of this architecture in urban autonomous driving include DIPP \cite{huang_DifferentiableIntegratedMotion_2024} and DiffStack \cite{karkus_DiffStackDifferentiableModular_2022}, which demonstrate that joint gradient-based optimization outperforms the stack of individually optimized modules.  
+Examples of this architecture applied to an urban scenario include the works of Huang et al. \cite{huang_DifferentiableIntegratedMotion_2024} and Karkus et al. \cite{karkus_DiffStackDifferentiableModular_2022}, which demonstrate that joint gradient-based optimization outperforms the stack of individually optimized modules.  
 Additionally, Jahncke and Betz \cite{jahncke_MINDStackModularInterpretable_2025} describes the Modular, Interpretable, and Differentiable (MIND) software stack, which applies the same principle of co-optimizing differentiable localization and control modules on the RoboRacer platform.
 
-%* focus on the transition to this thesis
-Building on the work of MIND, DiffPlan \cite{swadiryus_DifferentiableMotionPlanning_2025, koch_DifferentiableInterpretablePath_2025}, focused on implementing a differentiable local motion planner which generates a series of possible trajectories and selects the most optimal one.
-Although, this additional work materialized into a more computationally intensive effort than the on-board embedded system on the RoboRacer vehicle could handle.
-Henceforth, this thesis aims to computationally optimize DiffPlan to make it run faster, with a focus on possible vectorizations that can be achieved.
-Additionally, a new method of local motion planning is introduced called spatial differentiable local motion planner, DiffSpatialPlan, an additional comparison between the traditional temporal and the spatial methods.
+%! focus on the transition to this thesis
+%! focus on the build up of DiffPlan as an addition to MIND, concatenating an additional module to the stack.
+%! MIND could only previously follow a predetermined global path.
+%! DiffPlan was a two part work Swadiryus and Koch, I need to mention Koch's contributions quickly.
+% MIND already demonstrated that a learned localization network and a differentiable controller can co-train when gradients flow from a downstream control loss \cite{jahncke_MINDStackModularInterpretable_2025}, but the stack still tracked a fixed global raceline and could not replan locally when feasibility or collision constraints changed.
+% Swadiryus \cite{swadiryus_DifferentiableMotionPlanning_2025} addressed this limitation by inserting a sampling-based local planner between localization and control.
+% DiffPlan samples polynomial candidate trajectories in the Frenet frame, scores them with an interpretable cost function that encodes collision risk, raceline adherence, and driving speed, and passes the selected trajectory to the controller.
+% Koch \cite{koch_DifferentiableInterpretablePath_2025} then removed the remaining bottleneck in this pipeline: the discrete $\arg\min$ over candidate trajectories.
+% Koch introduced a differentiable sample-selection method, designed end-to-end loss terms that connect planner output to downstream control performance, and validated the resulting stack in path-tracking, static obstacle avoidance, and head-to-head racing scenarios.
+% integrated into a fully trainable racing stack, preserving the interpretability of classical sampling-based planning while enabling gradient-based co-optimization across modules.
+% Together, these two works establish DiffPlan as the first differentiable local motion planner which connected planner output to downstream control through end-to-end loss terms
+Building on MIND, Swadiryus \cite{swadiryus_DifferentiableMotionPlanning_2025} extended the RoboRacer stack with DiffPlan, a differentiable local planner that replaces MIND's fixed global raceline with online trajectory generation.
+Initially, Swadiryus \cite{swadiryus_DifferentiableMotionPlanning_2025} developed the trajectory sampling planner, which generates a series of time horizon trajectories and scores them based on a cost function.
+The planner then selects the trajectory with the smallest cost to be passed to the control unit.
+Later, Koch \cite{koch_DifferentiableInterpretablePath_2025} relaxed the discrete selection of a candidate trajectory with a differentiable sample-selection method, connecting planner output to downstream control through end-to-end loss terms.
+DiffPlan showed that gradients from downstream control objectives can propagate back through the planner to co-train localization and learnable cost weights for autonomous racing.
+Unfortunately, deploying DiffPlan on the physical RoboRacer vehicle revealed unstable real-time operation due to computational inefficiencies \cite{koch_DifferentiableInterpretablePath_2025}.
+%! make thesis topic more specific
+Henceforth, this thesis aims to enable on-board computing of the entire DiffPlan stack and independent deployment of the self-driving car.
+This is executed through various computational optimizations such as vectorizations, just in time (JIT) compilation, and precomputing data.
+Additionally, this thesis will investigate another method of local motion planning focusing on online velocity profile generation utilizing spatial sampling.
+Various experiments will be conducted; first to measure the speedup of the associated optimized algorithms, second to benchmark and compare the two differentiable local motion planner: temporal sampler DiffPlan and the spatial sampler DiffSpatialPlan. 
 
 %* modify this later when layout is more clear
-Chapter \ref{part:background} will cover the theoretical basics of autonomous vehicle systems, including the breakdown of the past and current used methods for autonomous navigation.
-In addition to the mathematical foundations to describe the workings of motion planners and the subsequent branch of differentiable motion planners.
-Concluding with the description and development of the differentiable sampling-based motion planner known as DiffPlan.
-Chapter \ref{part:method} provides the changes that were done to optimize DiffPlan and the algorithm faster, as well as introducing a spatial differentiable sampling motion planner.
-Chapter \ref{part:resultsAndConclusion} defines experimental setup which includes working on the offline simulation and the real world testing.
-Additionally, Chapter 5 discusses the analysis of the experiments done and their interpretations.
-Concluding with Chapter 6 which covers the overall conclusion of this paper and the future steps to be taken.
+%! modify this at the end
+Part \ref{part:background} presents the literature review of past and current methods of autonomous vehicle systems in Section \ref{chapter:AutonomousDrivingSystems}.
+%? to the mathematical foundations to describe the workings of motion planners and the subsequent branch of differentiable motion planners.
+In addition, the state of the art methods of motion planners, which allow autonomous navigation of vehicles, is discussed in Section \ref{chapter:MotionPlanners}.
+Concluding with the description and development of the differentiable sampling-based motion planner known as DiffPlan in Section \ref{chapter:DiffPlan}.
+Part \ref{part:methods} provides the changes that were done to optimize DiffPlan and the algorithm faster, as well as introducing a spatial differentiable sampling motion planner.
+Part \ref{part:resultsAndConclusion} defines experimental setup which includes working on the offline simulation and the real world testing.
+Additionally, Part V discusses the analysis of the experiments done and their interpretations.
+Concluding with Part VI which covers the overall conclusion of this paper and the future steps to be taken.
+
+\vspace{5mm}
+\noindent The github repository for programming could be found in:
+
+\noindent \href{https://github.com/niccwith2cc/DiffSpatialPlan}{https://github.com/niccwith2cc/DiffSpatialPlan}
