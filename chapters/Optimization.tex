@@ -8,16 +8,15 @@ Hence, a simple profiler was adapted inside the code to measure the execution ti
 how the optimizations were applied to the old code in order to achieve a recommended speed up for the autonomous vehicle to be responsive enough
 to be driven accurately to how the planner and controller predict. 
 
-\section{Sampling}
-\label{section:Sampling}
+\section{Vectorize Sampling for Planner}
+\label{section:VecSampling}
 
-The full algorithm can be expressed in the below pseudocode,  
-
-\begin{algorithm}[htbp]
+The full algorithm can be expressed in the below pseudocode,
+\begin{algorithm}[ht!]
 \caption{Original Longitudinal Sampling}
 \begin{algorithmic}[1]
-\Require Initial position $s_{start}$, clamped initial velocity $\dot{s}_{init}$, time vector $\mathbf{t} \in \mathbb{R}^{m}$, target end velocities $\mathbf{v}_{end} \in \mathbb{R}^{N}$, duplication factor $n$, track length $L$
-\Ensure Position trajectories $\mathbf{S}$, velocity trajectories $\dot{\mathbf{S}}$, end positions $\mathbf{s}_{end}$
+% \Require Initial position $s_{start}$, clamped initial velocity $\dot{s}_{init}$, time vector $\mathbf{t} \in \mathbb{R}^{m}$, target end velocities $\mathbf{v}_{end} \in \mathbb{R}^{N}$, duplication factor $n$, track length $L$
+% \Ensure Position trajectories $\mathbf{S}$, velocity trajectories $\dot{\mathbf{S}}$, end positions $\mathbf{s}_{end}$
 \State $t_{end} \gets \mathbf{t}[m]$ \Comment{Final time step}
 \State $\mathbf{A} \gets \begin{pmatrix} 1 & 0 & 0 \\ 0 & 1 & 0 \\ 0 & 1 & 2 t_{end} \end{pmatrix}$
 \State Initialize empty matrices $\mathbf{S}$, $\dot{\mathbf{S}}$ and empty vector $\mathbf{s}_{end}$
@@ -37,6 +36,7 @@ The full algorithm can be expressed in the below pseudocode,
 \end{algorithmic}
 \end{algorithm}
 
+\newpage 
 The following pseudocode is the simple improvement instead of solving batches of Ac = b. Where Ac = b is the solution for a single column vector N 
 number of times. Setting up matrix B to hold all N vectors side-by-side as a single matrix of shape 3 x N, saves us doing only one linear solve to find the 
 C coefficients.
@@ -62,8 +62,8 @@ C coefficients.
 \end{algorithmic}
 \end{algorithm}
 
-\section{Wall Collision}
-\label{section:WallCollision}
+\section{Vectorize Wall Proximity Calculation}
+\label{section:VecWallCollision}
 
 In a similar manner, the function which evaluates how close the vehicle's position relative is to the wall given a small circular radius around that position,
 is evaluated in a slow manner using a for loop while logically correct it ends up taking the largest time fraction of the simulation. However this can be simply
@@ -113,10 +113,21 @@ fixed by employing a simple vectorization to take advantage of the data.
 \end{algorithmic}
 \end{algorithm}
 
-\section{GPU Optimization}
-\label{section:GPUOptimization}
+\newpage
+\section{GPU Offloading}
+\label{section:GPUOffloading}
 
-maybe include what you did for gpu optimization here.
+Considering this code will eventually be run on an NVIDIA Jetson Orin Nano Super an embedded system chip mounted on the RoboRacer vehicle.
+The Jetson Orin Nano has a six-core Arm processor and an NVIDIA Ampere equivalent GPU with 1024 CUDA cores and 32 tensor cores.
+The Jetson has a good amount of compute on the GPU and therefore should be explored by taking advantage of GPU offloading.
+This is a common occurrence in neural networks, as they have an abundance of matrix-vector multiplications and other high data intensive operations which the GPU is more suitable for given its large number of core counts compared to the CPU.
+Hence, the central idea hinged on taking the vectorized code from previous sections \ref{section:VecSampling} and \ref{section:VecWallCollision} and utilizing PyTorch's device context manager to transfer requested operations to the GPU.
+
+Initially, the entire stack is offloaded to the GPU with the explicit goal of initializing all needed variables already on the GPU.
+This required minimal effort to accomplish.
+However, in order to solve the LQR of DiffMPC that required meticulous sequential ordering as the output of the previous solution was used to solve the next time step.
+This caused the computation stack to be interrupted on the GPU, moving all variables and data to the CPU to compute the entire DiffMPC stack, for them to be moved back to GPU to continue the rest of the calculation.
+Leading to overall a worse execution time for the GPU offloading approach.
 
 % when speaking about Felix and Jeremy's local planner we focus on the fact that the car rarely straifes away from the global planner but rather keeps going at that speed
 % no advantages for the local portion of it other than obstacle avoidance but this is not very accurate to racing.
