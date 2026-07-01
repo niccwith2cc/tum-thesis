@@ -1,0 +1,75 @@
+% !TEX root = ../main.tex
+\chapter{Conclusion}
+\label{chapter:Conclusion}
+
+\section{Summary}
+\label{section:ConclusionSummary}
+
+This thesis set out to advance the differentiable modular planning stack developed on the RoboRacer platform.
+The goals were twofold: to enable on-board execution of DiffPlan, and to broaden the family of differentiable local motion planners available within the MIND ecosystem \cite{jahncke_MINDStackModularInterpretable_2025, swadiryus_DifferentiableMotionPlanning_2025, koch_DifferentiableInterpretablePath_2025}.
+Chapter~\ref{chapter:optimizations} identified the runtime bottlenecks of the original DiffPlan implementation through profiling.
+Two routines were then vectorized to remove them: the longitudinal sampling routine, and the wall-proximity computation used inside the collision loss.
+GPU offloading was also explored to leverage the accelerator present on the target Jetson Orin Nano Super compute platform.
+Chapter~\ref{chapter:SpatialSampler} introduced DiffSpatialPlan, a differentiable spatial sampling planner that adapts the online velocity-profile method of Langmann et al.\ \cite{langmann_OnlineVelocityProfile_2025} to the two-dimensional RoboRacer setting.
+DiffSpatialPlan pairs online apex detection with a forward-backward friction-limited solver and a quintic spatial parameterization.
+Hard $\arg\min$ operations are replaced with soft aggregations so that gradients from downstream control losses can still propagate through the planner.
+
+Subsequently, Chapters~\ref{chapter:Experiments} and~\ref{chapter:Results} evaluated the two contributions against the baseline planner.
+The benchmarks cover runtime, scalability, and driving behavior in the F1TENTH Gym simulator, and extend to the physical RoboRacer vehicle on the FTM Oval circuit.
+The vectorized DiffPlan achieved an approximately $2.6\times$ end-to-end speedup relative to the original implementation, raising the $\texttt{/drive}$ publish rate from $13.2$\,Hz to $34.1$\,Hz.
+DiffSpatialPlan reached $30.7$\,Hz on the same workstation.
+The scaling study confirmed that the vectorized variants soften the dependence of planning time on the number of sampled trajectories that characterized the baseline.
+In the head-to-head driving comparison, DiffPlan consistently produced tighter raceline adherence, while DiffSpatialPlan produced faster and more robust laps.
+The robustness gap was most notable on the boundary-constrained Austria circuit, where DiffSpatialPlan avoided the wall contacts observed with the temporal planner during early training laps.
+The physical FTM Oval runs showed that both planners train successfully on hardware under motion-capture localization.
+The sim-to-real gap manifested as a hardware-imposed speed ceiling that compressed the lap-time advantage previously observed for the spatial planner in simulation.
+
+\section{Outlook}
+\label{section:ConclusionOutlook}
+
+Taken together, these results support two broader observations about the differentiable modular stack.
+The first observation concerns where the runtime cost of differentiability actually comes from.
+Much of that cost does not originate from automatic differentiation itself, but from the unvectorized Python control flow that surrounds the tensor operations.
+Once the sampling and collision-loss routines were reformulated as batched linear-algebra expressions, the planner reached publish rates that approach the real-time regime targeted by the MIND stack \cite{jahncke_MINDStackModularInterpretable_2025}.
+
+The second observation concerns hardware placement.
+Partial migration of the stack to the GPU can be actively harmful.
+Because the differentiable MPC still solves its LQR sub-problem sequentially on the CPU, tensors must be transferred from GPU to CPU and back again at every planning cycle.
+In the GPU-offloading experiment, these host-device transfers erased the gains obtained elsewhere on the graph.
+Differentiable modular stacks must therefore be considered as a whole when reasoning about hardware placement, since optimizing each module in isolation is not sufficient.
+
+Moreover, the comparison between DiffPlan and DiffSpatialPlan clarifies the design trade-off between temporal and spatial sampling in a racing context.
+The temporal sampler discretizes the horizon in time, so its lookahead footprint contracts at low speeds and expands at high speeds.
+This tightly couples raceline adherence to the current velocity of the vehicle.
+The spatial sampler instead fixes the horizon in arc length and derives velocity from an online friction-limited profile that is aware of upcoming apexes.
+As a result, DiffSpatialPlan exhibits behavior that is closer to that of a human racing driver.
+Braking is placed relative to the geometry of the corner rather than relative to the current sampling horizon, and cornering speed reflects the currently available grip.
+This structural difference explains both the robustness advantage on Austria and the higher cumulative lateral deviation on all three tracks.
+The wider cornering lines that the spatial sampler favors are geometrically further from the offline reference, even when they are dynamically preferable.
+
+Nevertheless, one central objective of the thesis remained unmet.
+Full on-board execution of the stack on the Jetson Orin Nano Super was not achieved.
+The main reason is that the CPU-bound DiffMPC controller prevents the planning graph from remaining resident on the accelerator.
+The algorithm therefore continues to run on the external workstation and communicates with the vehicle over ROS2, as illustrated in Figure~\ref{fig:exp_setup_real}.
+In light of this limitation, the contribution of this thesis should be understood as a decisive step toward on-vehicle deployment rather than a completion of it.
+The algorithmic footprint has been reduced to a level at which on-board computation becomes plausible, and the sim-to-real transferability of the training procedure has been validated on the physical FTM Oval circuit.
+
+\section{Future Work}
+\label{section:ConclusionFutureWork}
+
+Building on these findings, several directions appear particularly promising for subsequent work on the differentiable RoboRacer stack.
+Foremost, replacing the current DiffMPC controller with a fully parallelizable formulation is the most immediate prerequisite for on-vehicle deployment.
+The recent GPU-accelerated differentiable MPC of Adabag et al.\ \cite{adabag_DifferentiableModelPredictive_2025}, implemented in JAX, offers a natural candidate.
+Migrating the controller in this direction would eliminate the host-device oscillation identified in Section~\ref{section:GPUOffloading} and allow the entire planning-control graph to remain resident on the Jetson GPU.
+Closing the controller gap alone should suffice to reach onboard real-time execution.
+
+In addition, extending differentiability toward a more complex prediction module constitutes a natural continuation of the MIND research programme \cite{jahncke_MINDStackModularInterpretable_2025, huang_DifferentiableIntegratedMotion_2024, karkus_DiffStackDifferentiableModular_2022}.
+The experiments in this thesis intentionally isolated the planning and control stack.
+They relied on ground-truth pose from simulator odometry or motion capture, and the prediction module was disabled.
+Reintroducing a differentiable opponent-prediction model, together with the differentiable perception front-end, would allow downstream driving losses to shape upstream feature extraction.
+Care must be taken to select architectures whose gradients remain informative under the soft-selection mechanisms already used by DiffPlan and DiffSpatialPlan.
+
+Furthermore, the evaluation methodology itself can be strengthened.
+The driving experiments in this thesis were limited to solo lap-time optimization without opponents or static obstacles, and to a single physical circuit.
+Follow-up work should evaluate DiffSpatialPlan on additional physical tracks, incorporate opponent vehicles to exercise the currently dormant prediction path, and extend the sim-to-real study observed on the FTM Oval circuit.
+Ultimately, three ingredients would move the RoboRacer platform closer to the vision of an interpretable, gradient-trainable autonomous racing stack that operates entirely on-board: a parallelizable differentiable controller, a fully differentiable perception-prediction-planning-control pipeline, and broader empirical validation.

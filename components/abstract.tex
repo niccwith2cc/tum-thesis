@@ -11,18 +11,11 @@
 \end{center}
 \vspace{1cm}
 
-This thesis tackles algorithmic improvements implemented on a sampling based motion planner used to autonomously drive a vehicle.
-The improvements involve vectorizing sampling many paths at once alongside vectorizing the loss calculation used to tweak the parameters of the differentiable motion planner.
-Finally, an investigation is done between a temporal planner along side a spatial planner to contrast and compare their characteristics.
-
-% This document will serve as an example to you, of how to use \LaTeX to write your
-% CSE Master's Thesis. It will have examples and recomendations, and hopefully a
-% few laughs.  Because this is the abstract, it will have to convince you that this 
-% template is something you want to use.  It has been proven, that without using
-% this template, writing your thesis will be much more dificult. The template is
-% based on previous work, and has been improved apon and updated.  The result of 
-% this template is a modern latex template that everyone can contribute to and use
-% for their studies of CSE @ TUM.
-
-% Some more great abstract tips can be found here: 
-% \href{https://users.ece.cmu.edu/~koopman/essays/abstract.html}{Great Abstract tips}
+This thesis addresses the computational limitations of DiffPlan, a differentiable sampling-based local motion planner for autonomous racing on the RoboRacer platform.
+Prior work showed that gradients from downstream control objectives can be backpropagated through the planner to co-train localization and learnable cost weights, but the original implementation was too slow for stable real-time operation on the physical vehicle.
+The work presented here pursues two complementary directions: accelerating the existing temporal planner through vectorization of trajectory sampling and loss evaluation, and introducing DiffSpatialPlan, a spatial sampling variant that computes an online velocity profile and apex-aware trajectory candidates along a fixed raceline while remaining fully differentiable and compatible with the existing ROS\,2 stack.
+The optimizations replace sequential Python loops with a combination of loop vectorization and batched tensor operations, raising the drive-command publish rate from $13.2$\,Hz to $34.12$\,Hz ($2.59\times$ speedup) and bringing differentiable planning closer to onboard real-time feasibility.
+DiffSpatialPlan itself achieves $30.66$\,Hz ($2.33\times$ relative to the baseline), demonstrating that the spatial formulation remains computationally competitive despite its additional velocity-profiling stage.
+Both planners are benchmarked in the F1TENTH Gym simulator on three racetracks and on the physical FTM Oval circuit under identical training objectives.
+Across the completed simulation experiments, DiffSpatialPlan consistently records the fastest lap times.
+These results indicate that spatial sampling with online velocity adaptation yields superior performance relative to purely temporal trajectory generation, while vectorization makes the differentiable planning stack practical for embedded deployment on RoboRacer hardware.

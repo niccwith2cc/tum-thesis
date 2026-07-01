@@ -3,17 +3,24 @@
 \chapter{Optimizations}
 \label{chapter:optimizations}
 
-In order to perform optimizations on any code one must first identify the underlying bottlenecks and inefficiencies in said piece of code.
-Hence, a simple profiler was adapted inside the code to measure the execution time of certain functions. The current chapter discusses
-how the optimizations were applied to the old code in order to achieve a recommended speed up for the autonomous vehicle to be responsive enough
-to be driven accurately to how the planner and controller predict. 
+% In order to perform optimizations on any code one must first identify the underlying bottlenecks and inefficiencies in that code.
+% Hence, a simple profiler was added inside the code to measure the execution time of certain functions.
+% The current chapter discusses how the optimizations were applied to the old code in order to achieve a speedup sufficient for the autonomous vehicle to respond in real time.
+Before the DiffPlan stack can be optimized, the functions that dominate the runtime must first be identified.
+The PyTorch \cite{paszke_PyTorchImperativeStyle_2019} profiler was added to the stack to record per-function execution times during simulation.
+This chapter describes the two principal bottlenecks identified in the sampling planner and the loss calculation, explains how they were improved, and briefly discusses a subsequent GPU offloading attempt.
+%! edit
+The goal of each change is to bring the planner close to real-time execution on the onboard compute platform described in Chapter~\ref{chapter:Experiments}.
 
 \section{Vectorize Sampling for Planner}
 \label{section:VecSampling}
 
-The full algorithm can be expressed in the below pseudocode,
+DiffPlan generates longitudinal candidate trajectories by solving a $3 \times 3$ boundary-value problem for each sampled terminal velocity $\dot{s}_{\text{end}, i}$.
+The original implementation as abstracted in pseudocode is shown in Algorithm~\ref{alg:orig-long-sampling}, evaluating these trajectories inside nested Python loops.
+
 \begin{algorithm}[ht!]
 \caption{Original Longitudinal Sampling}
+\label{alg:orig-long-sampling}
 \begin{algorithmic}[1]
 % \Require Initial position $s_{start}$, clamped initial velocity $\dot{s}_{init}$, time vector $\mathbf{t} \in \mathbb{R}^{m}$, target end velocities $\mathbf{v}_{end} \in \mathbb{R}^{N}$, duplication factor $n$, track length $L$
 % \Ensure Position trajectories $\mathbf{S}$, velocity trajectories $\dot{\mathbf{S}}$, end positions $\mathbf{s}_{end}$
@@ -36,13 +43,18 @@ The full algorithm can be expressed in the below pseudocode,
 \end{algorithmic}
 \end{algorithm}
 
-\newpage 
-The following pseudocode is the simple improvement instead of solving batches of Ac = b. Where Ac = b is the solution for a single column vector N 
-number of times. Setting up matrix B to hold all N vectors side-by-side as a single matrix of shape 3 x N, saves us doing only one linear solve to find the 
-C coefficients.
+% \newpage
+The outer loop runs $N$ times, once per sampled terminal velocity, and the inner loop duplicates each trajectory $n$ times before lateral sampling combines the results.
+Although solving a single $3 \times 3$ system costs only $O(1)$ arithmetic, the implementation performs $N$ separate solves and $N \cdot n$ list append operations under the Python interpreter.
+The overall complexity is therefore $O(N \cdot m \cdot n)$ in floating-point work, but the dominant cost is the $O(N \cdot n)$ sequential loop iterations.
+
+The per-trajectory Python loop is removed by stacking all $N$ boundary vectors into one matrix $\mathbf{B} \in \mathbb{R}^{3 \times N}$ and solving $\mathbf{A}\mathbf{C}=\mathbf{B}$ in a single call.
+Polynomial evaluation then becomes an outer product over the full time grid $\mathbf{t} \in \mathbb{R}^{m}$, producing all $N$ position and velocity profiles as dense tensors in $O(m \cdot N)$ time.
+Algorithm~\ref{alg:vec-long-sampling} summarizes the vectorized procedure.
 
 \begin{algorithm}[htbp]
 \caption{Vectorized Longitudinal Sampling}
+\label{alg:vec-long-sampling}
 \begin{algorithmic}[1]
 \Require Initial position $s_{start}$, clamped initial velocity $\dot{s}_{init}$, time vector $\mathbf{t} \in \mathbb{R}^{m}$, target end velocities $\mathbf{v}_{end} \in \mathbb{R}^{N}$, duplication factor $n$, track length $L$
 \Ensure Position trajectories $\mathbf{S}$, velocity trajectories $\dot{\mathbf{S}}$, end positions $\mathbf{s}_{end}$
@@ -62,15 +74,20 @@ C coefficients.
 \end{algorithmic}
 \end{algorithm}
 
+This reformulation reduces the number of sequential linear solves from $N$ to one, yielding an $N$-fold improvement in that phase.
+In practice, this change will depend on the size of $N$ and the results for the runtime benchmarks can be found in Chapter~\ref{chapter:Results}.
+
 \section{Vectorize Wall Proximity Calculation}
 \label{section:VecWallCollision}
 
-In a similar manner, the function which evaluates how close the vehicle's position relative is to the wall given a small circular radius around that position,
-is evaluated in a slow manner using a for loop while logically correct it ends up taking the largest time fraction of the simulation. However this can be simply
-fixed by employing a simple vectorization to take advantage of the data.
+The profiler identified this function to take almost half the total execution time, which matches with the findings of Koch \cite{koch_DifferentiableInterpretablePath_2025}.
+The collision loss depends on the distance between the ego vehicle and the nearest track-boundary point within a local search radius.
+To approximate this distance, the planner discretizes the centerline into $N$ arc-length samples, where in this case $N = 50$ and computes left and right wall coordinates at each sample.
+Algorithm~\ref{alg:orig-wall-collision} shows the original loop-based implementation.
 
 \begin{algorithm}[htbp]
 \caption{Original Wall Collision}
+\label{alg:orig-wall-collision}
 \begin{algorithmic}[1]
 \Require Initial position $x_{car}$, $y_{car}$, search radius $r_{\text{search}} = 3.0$, number of discretized points $N = 50$
 \Ensure Matrix of wall boundary points $\mathbf{P}_{wall} \in \mathbb{R}^{2N \times 2}$
@@ -91,8 +108,16 @@ fixed by employing a simple vectorization to take advantage of the data.
 \end{algorithmic}
 \end{algorithm}
 
+Each loop iteration performs a track-width lookup, a Frenet-to-Cartesian conversion, a heading query, and two boundary-point updates.
+The body is $O(1)$ per sample, but the loop runs $N$ times per collision evaluation, giving $O(N)$ total arithmetic with $N$ separate list appends.
+
+The same logic is vectorized by evaluating every quantity across the full vector $s_{\text{search}}$ at once, as shown in Algorithm~\ref{alg:vec-wall-collision}.
+Track-width queries, coordinate transforms, and heading lookups return tensors of shape $\mathbb{R}^{N}$ or $\mathbb{R}^{N \times 2}$.
+Element-wise trigonometry forms the normal directions, and broadcasting computes all left and right boundary points in two matrix operations before concatenating the results into $\mathbf{P}_{\text{wall}}$.
+
 \begin{algorithm}[htbp]
 \caption{Vectorized Wall Collision}
+\label{alg:vec-wall-collision}
 \begin{algorithmic}[1]
 \Require Initial position $x_{car}$, $y_{car}$, search radius $r_{\text{search}} = 3.0$, number of discretized points $N = 50$
 \Ensure Matrix of wall boundary points $\mathbf{P}_{wall} \in \mathbb{R}^{2N \times 2}$
@@ -113,21 +138,25 @@ fixed by employing a simple vectorization to take advantage of the data.
 \end{algorithmic}
 \end{algorithm}
 
-\newpage
+% \newpage
+The arithmetic complexity remains $O(N)$ in the number of discretization points, but the number of Python loop iterations is reduced from $N$ to one.
+This yields an $N$-fold reduction by allowing the use of SIMD parallelism \cite{flynn_ComputerOrganizationsTheir_1972, paszke_PyTorchImperativeStyle_2019}.
+Because the collision loss is evaluated at every step, this vectorization removes the dominant bottleneck that previously limited the planner publish rate.
+
 \section{GPU Offloading}
 \label{section:GPUOffloading}
 
-Considering this code will eventually be run on an NVIDIA Jetson Orin Nano Super an embedded system chip mounted on the RoboRacer vehicle.
-The Jetson Orin Nano has a six-core Arm processor and an NVIDIA Ampere equivalent GPU with 1024 CUDA cores and 32 tensor cores.
-The Jetson has a good amount of compute on the GPU and therefore should be explored by taking advantage of GPU offloading.
-This is a common occurrence in neural networks, as they have an abundance of matrix-vector multiplications and other high data intensive operations which the GPU is more suitable for given its large number of core counts compared to the CPU.
-Hence, the central idea hinged on taking the vectorized code from previous sections \ref{section:VecSampling} and \ref{section:VecWallCollision} and utilizing PyTorch's device context manager to transfer requested operations to the GPU.
+Considering that this code will eventually run on an NVIDIA Jetson Orin Nano Super, an embedded system-on-chip mounted on the RoboRacer vehicle, GPU offloading was explored as an additional optimization path.
+The Jetson Orin Nano has a six-core Arm processor and an NVIDIA Ampere-equivalent GPU with 1024 CUDA cores and 32 tensor cores.
+The Jetson provides substantial GPU compute and therefore should be explored by taking advantage of GPU offloading.
+This is a common occurrence in neural networks, as they have an abundance of matrix-vector multiplications and other data-intensive operations for which the GPU is more suitable given its high core count compared to the CPU.
+Hence, the central idea hinged on taking the vectorized code from Sections~\ref{section:VecSampling} and~\ref{section:VecWallCollision} and utilizing PyTorch's device context manager to transfer requested operations to the GPU.
 
 Initially, the entire stack is offloaded to the GPU with the explicit goal of initializing all needed variables already on the GPU.
 This required minimal effort to accomplish.
-However, in order to solve the LQR of DiffMPC that required meticulous sequential ordering as the output of the previous solution was used to solve the next time step.
+However, solving the LQR sub-problem of DiffMPC requires strict sequential ordering, since the solution at each time step depends on the previous one.
 This caused the computation stack to be interrupted on the GPU, moving all variables and data to the CPU to compute the entire DiffMPC stack, for them to be moved back to GPU to continue the rest of the calculation.
-Leading to overall a worse execution time for the GPU offloading approach.
+The resulting host-device transfers overwhelmed the speedup expected from GPU offloading, producing adverse expected performance.
 
 % when speaking about Felix and Jeremy's local planner we focus on the fact that the car rarely straifes away from the global planner but rather keeps going at that speed
 % no advantages for the local portion of it other than obstacle avoidance but this is not very accurate to racing.

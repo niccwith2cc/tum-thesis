@@ -7,9 +7,43 @@
 
 \subsection{Runtime}
 
+The following figures and table report the effect of vectorization on DiffPlan runtime.
+Figure~\ref{fig:runtime-grouped} shows the mean runtime of each module across algorithm variants, the black bars represent the standard deviation given five total runs.
+First, the performance of DiffPlan and DiffSpatialPlan is compared.
+By far the largest improvement, exceeding 90\% improvement across all methods relative to the baseline, is the loss calculation which is indicative of the work done in Section \ref{section:VecWallCollision}.
+With the vectorized DiffPlan along with the DiffSpatialPlan, attaining 60\% total mean runtime improvement compared to the original baseline.
+The vectorized DiffPlan additionally benefits from the sampling vectorization with a 34\% faster runtime than the baseline, as outlined in Section \ref{section:VecSampling}.
+While DiffSpatialPlan simply outperforms standard DiffPlan by about 27\%.
+As expected, there is no impactful improvement in the controlling module.
+Additionally, the relative speed up with respect to the baseline algorithm is also documented in Figure~\ref{fig:runtime-speedup}.
+Figure~\ref{fig:runtime-speedup} analogously presents the same information as Figure~\ref{fig:runtime-grouped}, but presents the results in terms of relative speedup rather than absolute runtime.
+Hence, vectorized DiffPlan and SpatialDiffPlan exhibit an approximate 2.5-fold total speedup relative to the baseline.
+
+Figure~\ref{fig:runtime-grouped} and Figure~\ref{fig:runtime-speedup} also include the GPU-offloaded temporal DiffPlan variant described in Section~\ref{section:GPUOffloading}.
+This implementation reduces total mean runtime by $30\%$ over the baseline.
+Unfortunately, that gain is masked by the successful vectorization of the loss calculation module.
+By contrast, planning, controlling, and backpropagation each regress relative to the baseline, with controlling showing the largest penalty at roughly $62\%$ slower execution.
+Section~\ref{section:GPUOffloading} attributes this pattern to incomplete GPU migration, as the differentiable MPC controller still solves its sequential LQR sub-problem on the CPU.
+Therefore, at each control cycle computations must cease on the GPU to transport relevant variables to the the host device. 
+The transfer and synchronization overhead overwhelm the advantage gained in the vectorizations.
+GPU offloading thus yields a moderate overall speedup, but remains inferior to CPU vectorization.
+
+Table~\ref{tab:runtime-comparison} summarizes the mean $\texttt{/drive}$ topic publish frequency for the baseline temporal planner, its vectorized variant, and the spatial sampler DiffSpatialPlan.
+Vectorization increases the publish frequency from $13.2$\,Hz to $34.12$\,Hz, corresponding to a $2.59\times$ speedup, while DiffSpatialPlan achieves $30.66$\,Hz with a $2.33\times$ speedup relative to the baseline.
+
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{images/grouped_comparison_iterations.png}
+    \caption{Mean runtime of each module across the baseline temporal DiffPlan, vectorized temporal DiffPlan, the GPU offloaded temporal DiffPlan, and spatial sampler DiffSpatialPlan.}
+    \label{fig:runtime-grouped}
+\end{figure}
+
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{images/speedup_iterations.png}
+    \caption{Relative speedup of the vectorized temporal planner DiffPlan, the GPU offloaded temporal DiffPlan, and DiffSpatialPlan compared to the baseline temporal DiffPlan.}
+    \label{fig:runtime-speedup}
 \end{figure}
 
 \begin{table}[htbp]
@@ -27,133 +61,312 @@
     \end{tabular}
 \end{table}
 
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=\textwidth]{images/speedup_iterations.png}
-\end{figure}
-
-
 \subsection{Scaling}
+
+Figure~\ref{fig:planning-scaling} displays mean planning runtime as the number of sampled trajectories $n$ increases.
+The measurement complements the vectorization described in Section~\ref{section:VecSampling} by evaluating how sampling cost grows with problem size.
+
+The baseline temporal planner exhibits the steepest growth.
+Planning time rises effectively doubling over an eightfold increase in sample count.
+Meanwhile, both the vectorized temporal DiffPlan and DiffSpatialPlan remain faster than the baseline at every tested value of $n$.
+The steady runtime behavior of the vectorized DiffPlan and DiffSpatialPlan confirm that efficient sampling not only lowers planning computation time but almost annuls its dependence on $n$.
+
+The GPU-offloaded scaling follows a similar pattern, but with an added cost.
+Planning time remains near $24$\,ms across the full range, which is higher than the baseline at $n = 64$ but as $n$ increases the baseline rises and overtakes the GPU planning time at around $n = 250$.
+The high computational time is attributed to the GPU overhead, as the overhead cost is constant for all sizes of $n$ but the parallelism benefits from higher values of $n$ which results in no additional increase in compute time as $n$ grows.
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{images/planning_scaling.png}
+    \caption{Planning runtime as a function of the number of sampled trajectories across the baseline temporal DiffPlan, vectorized temporal DiffPlan, GPU offloaded temporal DiffPlan, and the spatial sampler DiffSpatialPlan.}
+    \label{fig:planning-scaling}
 \end{figure}
+
+\subsection{Achieving Real Time Computation}
+
+Unfortunately, real-time computation on the RoboRacer hardware was not achieved yet.
+This is primarily due to resource management on the NVIDIA Jetson Orin Nano which powers the vehicle.
+Full GPU encapsulation was not able to be achieved and therefore the stack was too computationally intensive to be computed on the car as stated previously by Swadiryus \cite{swadiryus_DifferentiableMotionPlanning_2025}.
+However, attaining another variant of the differentiable MPC which can be computed should be a priority.
+Adabag et al \cite{adabag_DifferentiableModelPredictive_2025} achieved a differentiable MPC that can be parallelized and computed on the GPU.
+The proposed MPC was written in JAX framework, which is similar to PyTorch, as it provides automatic differentiation for gradient propagation \cite{adabag_DifferentiableModelPredictive_2025,paszke_PyTorchImperativeStyle_2019}.
+
+Hence, this thesis provides a step in the right direction but still falls short of the desired goal of full on-board computation.
 
 \section{Local Sampling Planner}
 
 \subsection{Simulation Runs}
 
+The simulation results below compare the temporal motion planner DiffPlan, and spatial motion planner DiffSpatialPlan on three tracks during training.
+Each track subsection examines the positional trajectory of the vehicle, the lateral deviation from the raceline, and lap-time table for the first and the last lap of the training.
+Lateral deviation from the raceline is plotted for visual inspection and a scalar quantity is calculated and tabulated $\sum |n|$, where $n$ is the lateral deviation, to quantify the amount of total deviation per lap.
+Additionally, the loss function terms: $\mathcal{L}_{\text{coll}}, \ \mathcal{L}_{\text{prog}}, \ \mathcal{L}_{\text{rl}}$ are monitored and plotted throughout all the training laps. 
+
 \subsubsection{FTM Oval}
 
+For each of the planning algorithms used, Figure~\ref{fig:ftm-oval-sim09-traj} depicts the vehicle's path along the track for two laps.
+Looking at Tables \ref{tab:n-ftm} and \ref{tab:lap-ftm}, both planners improve upon their lap times and their total deviation as they completed their final training lap.
+Overall, the DiffPlan outperforms the spatial planner in raceline adherence, confirmed by the vehicle's first lap trajectory where the vehicle immediately tries to go back to the raceline.
+While the DiffSpatialPlan follows the curvature of the track to eventually meet up with the raceline.
+However, DiffSpatialPlan seems to be the finishing laps faster, at 3.79 seconds in the last training lap compared to 7.25 seconds for DiffPlan.
+This can be explained by looking at Figure \ref{fig:ftm-oval-sim09-v} which details the velocity profile of the vehicle for both laps, with the spatial planner pushing the car beyond the reference velocity.
+
+%! talk about the loss calculations now
 \begin{figure}[htbp]
-\centering
-\begin{subfigure}{.49\textwidth}
   \centering
-  \includegraphics[width=\linewidth]{images/ftm_oval_sim_0.png}
-%   \caption{A subfigure}
-  \label{fig:sub1}
-\end{subfigure}
-\begin{subfigure}{.49\textwidth}
-  \centering
-  \includegraphics[width=\linewidth]{images/ftm_oval_sim_0_n.png}
-%   \caption{A subfigure}
-  \label{fig:sub2}
-\end{subfigure}
-\caption{A figure with two subfigures}
-\label{fig:test}
+  \includegraphics[width=0.9\linewidth]{images/ftm_oval_sim_09.png}
+  \caption{Vehicle Trajectory on FTM Oval track for laps 0 and 9 with the raceline in grey}
+  \label{fig:ftm-oval-sim09-traj}
 \end{figure}
 
 \begin{figure}[htbp]
-\centering
-\begin{subfigure}{.49\textwidth}
   \centering
-  \includegraphics[width=\linewidth]{images/ftm_oval_sim_9.png}
-%   \caption{A subfigure}
-%   \label{fig:sub1}
-\end{subfigure}
-\begin{subfigure}{.49\textwidth}
+  \includegraphics[width=\linewidth]{images/ftm_oval_sim_09_n.png}
+  \caption{Lateral Deviation from raceline on FTM Oval track for laps 0 and 9}
+  \label{fig:ftm-oval-sim09-lat}
+\end{figure}
+
+\begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{images/ftm_oval_sim_9_n.png}
-%   \caption{A subfigure}
-%   \label{fig:sub2}
-\end{subfigure}
-% \caption{A figure with two subfigures}
-% \label{fig:test}
+  \includegraphics[width=\linewidth]{images/ftm_oval_sim_09_v.png}
+  \caption{Velocity profile of vehicle along FTM Oval track for laps 0 and 9 with the reference velocity in grey}
+  \label{fig:ftm-oval-sim09-v}
 \end{figure}
 
 \begin{table}[hbp]
     \centering
-    \caption{Lap Time Comparison While Training}
-    \label{tab:lap}
-    \begin{tabular}{llll}
+    \caption{Lateral Deviation from Global Raceline $\sum |n|$ (Lower is better) }
+    \label{tab:n-ftm}
+    \begin{tabular}{ccc}
         \hline
-        Lap & Baseline & Vectorized & Spatial \\
+        Lap & DiffPlan Dev (m) & DiffSpatialPlan Dev (m) \\
         \hline
-        0   &  8.84s   &   7.53s    &  5.17s  \\
-        9   &  7.25s   &   5.76s    &  3.79s  \\
+        0   &   14.290    &  34.100  \\
+        9   &   13.706    &  18.641  \\
         \hline
     \end{tabular}
 \end{table}
 
-%! add table for abs sum value of the lateral separation
+\begin{table}[hbp]
+    \centering
+    \caption{Lap Time Comparison on FTM Oval (Lower is better)}
+    \label{tab:lap-ftm}
+    \begin{tabular}{ccc}
+        \hline
+        Lap & DiffPlan (s) & DiffSpatialPlan (s)\\
+        \hline
+        0   &  8.84       &  5.17  \\
+        9   &  7.25       &  3.79  \\
+        \hline
+    \end{tabular}
+\end{table}
 
 \subsubsection{Yas Marina}
 
+The Yas Marina circuit features a longer track with more intricate racing scenarios than FTM Oval.
+Simulation outputs for laps~0 and~9 are displayed in Figures~\ref{fig:yas-marina-sim09-traj} to~\ref{fig:yas-marina-sim09-v}, with Tables~\ref{tab:n-yas} and~\ref{tab:lap-yas} reporting $\sum|n|$ and lap time.
+Both planners reduce cumulative lateral deviation and lap time by the final training lap.
+
+DiffPlan maintains tighter raceline tracking throughout training.
+Its cumulative lateral deviation falls from $95.9$\,m at lap~0 to $49.6$\,m at lap~9, compared with $186.8$\,m and $84.6$\,m for DiffSpatialPlan.
+Figure~\ref{fig:yas-marina-sim09-lat} supports this separation.
+Both planners recover quickly from the same initial lateral offset, yet DiffPlan again converges toward the reference path more aggressively in the opening meters of lap~0.
+Furthermore, the temporal planner produces pronounced lateral oscillations along the main straight, whereas the spatial planner stabilizes more quickly and already follows the circuit curvature.
+
+Despite the higher deviation metric, DiffSpatialPlan records the faster laps at both checkpoints.
+Lap time drops from $15.87$\,s at lap~0 to $14.38$\,s at lap~9, versus $25.86$\,s and $24.29$\,s for DiffPlan.
+Figure~\ref{fig:yas-marina-sim09-v} attributes this gap to a markedly more aggressive velocity profile.
+DiffPlan holds longitudinal speed near the offline reference.
+DiffSpatialPlan instead accelerates to approximately $5.0$\,m/s on the straights, brakes into the hard corners near $s \approx 10$\,m, $30$\,m, and $60$\,m along the circuit length.
+By lap~9 the spatial planner traces a smooth path that closely follows the raceline geometry, including the low-speed hairpin sections, while completing the circuit approximately $9.9$\,s faster than the temporal planner.
+
 \begin{figure}[htbp]
-\centering
-\begin{subfigure}{.49\textwidth}
   \centering
-  \includegraphics[width=\linewidth]{images/yas_marina_sim_0.png}
-%   \caption{A subfigure}
-%   \label{fig:sub1}
-\end{subfigure}
-\begin{subfigure}{.49\textwidth}
-  \centering
-  \includegraphics[width=\linewidth]{images/yas_marina_sim_0_n.png}
-%   \caption{A subfigure}
-%   \label{fig:sub2}
-\end{subfigure}
-% \caption{A figure with two subfigures}
-% \label{fig:test}
+  \includegraphics[width=\linewidth]{images/yas_marina_sim_09.png}
+  \caption{Vehicle Trajectory on Yas Marina Track for laps 0 and 9 with the raceline in grey}
+  \label{fig:yas-marina-sim09-traj}
 \end{figure}
 
 \begin{figure}[htbp]
-\centering
-\begin{subfigure}{.49\textwidth}
   \centering
-  \includegraphics[width=\linewidth]{images/yas_marina_sim_9.png}
-%   \caption{A subfigure}
-%   \label{fig:sub1}
-\end{subfigure}
-\begin{subfigure}{.49\textwidth}
+  \includegraphics[width=\linewidth]{images/yas_marina_sim_09_n.png}
+  \caption{Lateral Deviation from raceline on Yas Marina Track for laps 0 and 9}
+  \label{fig:yas-marina-sim09-lat}
+\end{figure}
+
+\begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{images/yas_marina_sim_9_n.png}
-%   \caption{A subfigure}
-%   \label{fig:sub2}
-\end{subfigure}
-% \caption{A figure with two subfigures}
-% \label{fig:test}
+  \includegraphics[width=\linewidth]{images/yas_marina_sim_09_v.png}
+  \caption{Velocity profile of vehicle along Yas Marina track for laps 0 and 9 with the reference velocity in grey}
+  \label{fig:yas-marina-sim09-v}
 \end{figure}
 
 \begin{table}[hbp]
     \centering
-    \caption{Lap Time Comparison While Training}
-    \label{tab:lap2}
-    \begin{tabular}{llll}
+    \caption{Lateral Deviation from Raceline $\sum |n|$ on Yas Marina (Lower is better) }
+    \label{tab:n-yas}
+    \begin{tabular}{ccc}
         \hline
-        Lap & Baseline & Vectorized & Spatial \\
+        Lap & DiffPlan Dev (m) & DiffSpatialPlan Dev (m) \\
         \hline
-        0   &  25.86s &    28.25s &        15.87s \\
-        9   &   24.29s &    28.88s &        14.38s \\
+        0   &   95.886         &        186.829  \\
+        9   &   49.612        &         84.647  \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\begin{table}[hbp]
+    \centering
+    \caption{Lap Time Comparison on Yas Marina (Lower is Better)}
+    \label{tab:lap-yas}
+    \begin{tabular}{ccc}
+        \hline
+        Lap & DiffPlan (s) & DiffSpatialPlan (s)\\
+        \hline
+        0   &  25.86  &   15.87 \\
+        9   &   24.29 &  14.38 \\
         \hline
     \end{tabular}
 \end{table}
 
 \subsubsection{Austria Track}
 
+As the most demanding of the three simulated circuits, the Austria track benchmarks how well the planning algorithms manage to find an optimal operating point.
+Figures~\ref{fig:austria-sim09-traj} to~\ref{fig:austria-sim09-v} compare planner behavior at the first and tenth training laps, and Tables~\ref{tab:n-aus} and~\ref{tab:lap-aus} collect the corresponding $\sum|n|$ and lap-time values.
+Consistent with the preceding tracks, training again lowers both metrics for each planner.
 
+Turning first to the temporal planner, lap~0 exposes repeated wall contacts, causing the vehicle to bounce off the barriers, reorient, and attempt to continue as shown in Figure~\ref{fig:austria-sim09-traj}.
+A large crash event appears in Figure~\ref{fig:austria-sim09-lat} near $s \approx 70$\,m, where a sharp negative spike in the lateral offset marks the terminal barrier contact before going through the last corner to the finish line.
+Over subsequent laps, the updated cost weights gradually steer DiffPlan away from the barriers, and by lap~9 the planner completes a full lap without crashing.
+
+By contrast, DiffSpatialPlan exhibits greater robustness even from the first lap.
+On lap~0 the vehicle manages to avoid crashing into the barriers and maintains a continuous path around the circuit.
+By lap~9 the spatial planner hugs the raceline through the corners and produces the trajectory that most closely matches the grey reference path in Figure~\ref{fig:austria-sim09-traj}.
+Nevertheless, cumulative lateral deviation remains higher for DiffSpatialPlan at both checkpoints ($259.5$\,m and $149.8$\,m versus $169.5$\,m and $121.8$\,m), reflecting the wider, speed-oriented cornering lines that the spatial sampler favors on this circuit.
+
+In terms of lap time, the gap between the two planners is the largest observed across all three tracks.
+DiffSpatialPlan records $19.95$\,s at lap~0 and $18.61$\,s at lap~9, compared with $42.51$\,s and $39.43$\,s for DiffPlan.
+Figure~\ref{fig:austria-sim09-v} explains this separation.
+DiffPlan holds speed between roughly $1.5$\,m/s and $3.5$\,m/s once a continuous lap becomes feasible, well below the offline reference that peaks near $11$\,m/s on the fastest segments.
+DiffSpatialPlan instead sustains approximately $4$\,m/s to $5$\,m/s across most of the lap, decelerating to about $2.5$\,m/s only through the demanding mid-circuit section between $s \approx 45$\,m and $s \approx 65$\,m, and its lap~0 and lap~9 profiles already agree closely.
+Overall, the Austria results highlight a clear robustness advantage for spatial sampling on a boundary-constrained circuit, while the temporal planner requires substantial training before it can complete a lap without contact, and even then remains substantially slower.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{images/austria_sim_09.png}
+  \caption{Vehicle Trajectory on Austria Track for laps 0 and 9 with the raceline in grey}
+  \label{fig:austria-sim09-traj}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{images/austria_sim_09_n.png}
+  \caption{Lateral Deviation from raceline on Austria Track for laps 0 and 9}
+  \label{fig:austria-sim09-lat}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{images/austria_sim_09_v.png}
+  \caption{Velocity profile of vehicle along Austria track for laps 0 and 9 with the reference velocity in grey}
+  \label{fig:austria-sim09-v}
+\end{figure}
+
+\begin{table}[hbp]
+    \centering
+    \caption{Lateral Deviation from Raceline $\sum |n|$ on Austria Track (Lower is better) }
+    \label{tab:n-aus}
+    \begin{tabular}{ccc}
+        \hline
+        Lap & DiffPlan Dev (m) & DiffSpatialPlan Dev (m) \\
+        \hline
+        0   &   169.531       &         259.528 \\
+        9   &   121.820       &         149.755  \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\begin{table}[hbp]
+    \centering
+    \caption{Lap Time Comparison on Austria Track (Lower is Better)}
+    \label{tab:lap-aus}
+    \begin{tabular}{ccc}
+        \hline
+        Lap & DiffPlan (s) & DiffSpatialPlan (s)\\
+        \hline
+        0   &  42.51s      &        19.95s      \\
+        9   &   39.43s     &        18.61s      \\
+        \hline
+    \end{tabular}
+\end{table}
 
 \subsection{Real Runs}
 
-\chapter{Conclusion}
+To assess the sim-to-real gap, both planners were deployed on the physical FTM Oval circuit using the setup depicted in Figure~\ref{fig:exp_setup_real}.
+The same planner configuration, initial raceline offset, and training objective from the simulation study were applied on the track.
+This subsection reports the corresponding hardware results and compares them against the simulated FTM Oval benchmarks above.
+
+\subsubsection{FTM Oval}
+
+On the physical circuit, Figures~\ref{fig:ftm-oval-real09-traj} to~\ref{fig:ftm-oval-real09-v} and Tables~\ref{tab:n-ftm-real} and~\ref{tab:lap-ftm-real} summarize behavior at laps~0 and~9.
+As in simulation, both planners reduce cumulative lateral deviation and lap time over training, yet the real runs expose a substantially narrower performance spread between the two algorithms.
+
+With respect to raceline adherence, DiffPlan again records the lower cumulative $\sum|n|$ values, falling from $21.1$\,m to $11.7$\,m compared with $80.8$\,m and $65.4$\,m for DiffSpatialPlan.
+Figure~\ref{fig:ftm-oval-real09-lat} and \ref{fig:ftm-oval-real09-traj} clarifies this contrast.
+Both planners correct the initial lateral offset near $0.95$\,m during lap~0, after which DiffPlan oscillates symmetrically about the reference while DiffSpatialPlan settles into a tighter radius to complete the lap.
+
+In terms of lap time, DiffSpatialPlan still achieves the faster final lap at $6.80$\,s versus $7.73$\,s for DiffPlan, but the margin is far smaller than in simulation, where the corresponding values in Table~\ref{tab:lap-ftm} were $3.79$\,s and $7.25$\,s.
+Figure~\ref{fig:ftm-oval-real09-v} shows both planners reaching a hardware limit of $2.3$\,m/s, whereas the offline reference exceeds $4.6$\,m/s along portions of the lap and the simulated spatial planner in Figure~\ref{fig:ftm-oval-sim09-v} routinely drives above the reference profile.
+
+Regarding sim-to-real transfer, the temporal planner reproduces simulation lap times most closely, recording $8.92$\,s versus $8.84$\,s at lap~0 and $7.73$\,s versus $7.25$\,s at lap~9.
+DiffSpatialPlan departs more strongly from its simulated performance, with the lap~9 time increasing from $3.79$\,s in simulation to $6.80$\,s on the physical track.
+Overall, the real FTM Oval experiments confirm that both planners train successfully on hardware under motion-capture localization.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{images/ftm_oval_real_09.png}
+  \caption{Real Vehicle Trajectory on FTM Track for laps 0 and 9}
+  \label{fig:ftm-oval-real09-traj}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{images/ftm_oval_real_09_n.png}
+  \caption{Real Lateral Deviation from raceline on FTM Track for laps 0 and 9}
+  \label{fig:ftm-oval-real09-lat}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{images/ftm_oval_real_09_v.png}
+  \caption{Velocity profile of the real vehicle along FTM Oval track for laps 0 and 9 with the reference velocity in grey}
+  \label{fig:ftm-oval-real09-v}
+\end{figure}
+
+\begin{table}[hbp]
+    \centering
+    \caption{Lateral Deviation from Global Raceline $\sum |n|$ (Lower is better) }
+    \label{tab:n-ftm-real}
+    \begin{tabular}{ccc}
+        \hline
+        Lap & DiffPlan Dev (m) & DiffSpatialPlan Dev (m) \\
+        \hline
+        0   &   21.096    &   80.760  \\
+        9   &   11.659    &   65.370  \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\begin{table}[hbp]
+    \centering
+    \caption{Lap Time Comparison on FTM Oval (Lower is better)}
+    \label{tab:lap-ftm-real}
+    \begin{tabular}{ccc}
+        \hline
+        Lap & DiffPlan (s) & DiffSpatialPlan (s)\\
+        \hline
+        0   &  8.92       &  8.21  \\
+        9   &  7.73       &  6.80  \\
+        \hline
+    \end{tabular}
+\end{table}
