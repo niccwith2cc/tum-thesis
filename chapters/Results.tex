@@ -100,7 +100,6 @@ Hence, this thesis provides a step in the right direction but still falls short 
 The simulation results below compare the temporal motion planner DiffPlan, and spatial motion planner DiffSpatialPlan on three tracks during training.
 Each track subsection examines the positional trajectory of the vehicle, the lateral deviation from the raceline, and lap-time table for the first and the last lap of the training.
 Lateral deviation from the raceline is plotted for visual inspection and a scalar quantity is calculated and tabulated $\sum |n|$, where $n$ is the lateral deviation, to quantify the amount of total deviation per lap.
-Additionally, the loss function terms: $\mathcal{L}_{\text{coll}}, \ \mathcal{L}_{\text{prog}}, \ \mathcal{L}_{\text{rl}}$ are monitored and plotted throughout all the training laps. 
 
 \subsubsection{FTM Oval}
 
@@ -114,28 +113,28 @@ This can be explained by looking at Figure \ref{fig:ftm-oval-sim09-v} which deta
 %! talk about the loss calculations now
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.9\linewidth]{images/ftm_oval_sim_09.png}
+  \includegraphics[width=0.7\linewidth]{images/ftm_oval_sim_09.png}
   \caption{Vehicle Trajectory on FTM Oval track for laps 0 and 9 with the raceline in grey}
   \label{fig:ftm-oval-sim09-traj}
 \end{figure}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{images/ftm_oval_sim_09_n.png}
+  \includegraphics[width=0.8\linewidth]{images/ftm_oval_sim_09_n.png}
   \caption{Lateral Deviation from raceline on FTM Oval track for laps 0 and 9}
   \label{fig:ftm-oval-sim09-lat}
 \end{figure}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{images/ftm_oval_sim_09_v.png}
+  \includegraphics[width=0.8\linewidth]{images/ftm_oval_sim_09_v.png}
   \caption{Velocity profile of vehicle along FTM Oval track for laps 0 and 9 with the reference velocity in grey}
   \label{fig:ftm-oval-sim09-v}
 \end{figure}
 
 \begin{table}[hbp]
     \centering
-    \caption{Lateral Deviation from Global Raceline $\sum |n|$ (Lower is better) }
+    \caption{Lateral Deviation from Global Raceline $\sum |n|$ on FTM Oval (Lower is better) }
     \label{tab:n-ftm}
     \begin{tabular}{ccc}
         \hline
@@ -182,21 +181,21 @@ By lap~9 the spatial planner traces a smooth path that closely follows the racel
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{images/yas_marina_sim_09.png}
+  \includegraphics[width=0.72\linewidth]{images/yas_marina_sim_09.png}
   \caption{Vehicle Trajectory on Yas Marina Track for laps 0 and 9 with the raceline in grey}
   \label{fig:yas-marina-sim09-traj}
 \end{figure}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{images/yas_marina_sim_09_n.png}
+  \includegraphics[width=0.8\linewidth]{images/yas_marina_sim_09_n.png}
   \caption{Lateral Deviation from raceline on Yas Marina Track for laps 0 and 9}
   \label{fig:yas-marina-sim09-lat}
 \end{figure}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{images/yas_marina_sim_09_v.png}
+  \includegraphics[width=0.8\linewidth]{images/yas_marina_sim_09_v.png}
   \caption{Velocity profile of vehicle along Yas Marina track for laps 0 and 9 with the reference velocity in grey}
   \label{fig:yas-marina-sim09-v}
 \end{figure}
@@ -253,21 +252,21 @@ Overall, the Austria results highlight a clear robustness advantage for spatial 
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{images/austria_sim_09.png}
+  \includegraphics[width=0.55\linewidth]{images/austria_sim_09.png}
   \caption{Vehicle Trajectory on Austria Track for laps 0 and 9 with the raceline in grey}
   \label{fig:austria-sim09-traj}
 \end{figure}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{images/austria_sim_09_n.png}
+  \includegraphics[width=0.8\linewidth]{images/austria_sim_09_n.png}
   \caption{Lateral Deviation from raceline on Austria Track for laps 0 and 9}
   \label{fig:austria-sim09-lat}
 \end{figure}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{images/austria_sim_09_v.png}
+  \includegraphics[width=0.8\linewidth]{images/austria_sim_09_v.png}
   \caption{Velocity profile of vehicle along Austria track for laps 0 and 9 with the reference velocity in grey}
   \label{fig:austria-sim09-v}
 \end{figure}
@@ -324,28 +323,28 @@ Overall, the real FTM Oval experiments confirm that both planners train successf
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{images/ftm_oval_real_09.png}
+  \includegraphics[width=0.7\linewidth]{images/ftm_oval_real_09.png}
   \caption{Real Vehicle Trajectory on FTM Track for laps 0 and 9}
   \label{fig:ftm-oval-real09-traj}
 \end{figure}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{images/ftm_oval_real_09_n.png}
+  \includegraphics[width=0.8\linewidth]{images/ftm_oval_real_09_n.png}
   \caption{Real Lateral Deviation from raceline on FTM Track for laps 0 and 9}
   \label{fig:ftm-oval-real09-lat}
 \end{figure}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{images/ftm_oval_real_09_v.png}
+  \includegraphics[width=0.8\linewidth]{images/ftm_oval_real_09_v.png}
   \caption{Velocity profile of the real vehicle along FTM Oval track for laps 0 and 9 with the reference velocity in grey}
   \label{fig:ftm-oval-real09-v}
 \end{figure}
 
 \begin{table}[hbp]
     \centering
-    \caption{Lateral Deviation from Global Raceline $\sum |n|$ (Lower is better) }
+    \caption{Lateral Deviation from Global Raceline $\sum |n|$ on FTM Oval (Lower is better) }
     \label{tab:n-ftm-real}
     \begin{tabular}{ccc}
         \hline

@@ -294,8 +294,12 @@ This section will cover a frame of reference that is commonly used in local moti
         % racing line
         \draw[very thick, dashed, red] 
             plot [smooth, tension=0.6] coordinates {(-0.5, 0) (-0.3, 1.2) (0.9, 3.1) (3.5, 4) (5.5, 4.2)};
-        % car
-        \fill[black] (0.05,2) circle (2pt);
+        % car and global heading
+        \coordinate (car) at (0.05, 2);
+        \fill[black] (car) circle (2pt);
+        \draw[dashed, thin] (car) -- ++(0.7, 0);
+        \draw[->, thick, blue] (car) -- ++(0, 0.75);
+        \draw (0.35, 2) arc (0:90:0.3) node[midway, above right, inner sep=1pt, font=\small] {$\psi$};
         \draw[->, thick] (1,0) -- (1.5,0) node[right] {$x$};
         \draw[->, thick] (1,0) -- (1,0.5) node[above] {$y$};
     \end{tikzpicture}
@@ -308,7 +312,8 @@ The use of the Frenet coordinate system $(s, n)$ allows simpler interpretation o
 The curvilinear Frenet frame consists of the longitudinal path $s$ along the curve and its deviation from said curve $n$ or sometimes called $d$.
 % modify the phrasing
 An additional reason Frenet is beneficial to use is because it simplifies the process of defining planning path constraints or target goals for the vehicle by separating longitudinal and lateral path directions. 
-The curve vehicles follow is called a raceline; it is a mathematically optimal line aiming to achieve a certain goal, most commonly fastest time to complete a full lap
+The curve vehicles follow is called a raceline; Figure~\ref{fig:trackrep} illustrates a circuit boundary, an example raceline, the global Cartesian frame, and the heading angle $\psi$ measured from the $x$-axis.
+It is a mathematically optimal line aiming to achieve a certain goal, most commonly fastest time to complete a full lap
 around a circuit, or minimum curvature of the raceline. The raceline may be represented as a continuous planar curve:
 
 \begin{equation}
@@ -344,18 +349,17 @@ This property is central to the motivation for the differentiable planners discu
 
 Graph and search planners approximate the configuration space as a discrete graph and compute a minimum-cost path from a start state to a goal state \cite{gonzalez_ReviewMotionPlanning_2016, loganathan_systematic_2023}.
 The environment is commonly represented as an occupancy grid or state lattice whose nodes correspond to reachable vehicle configurations and whose edges encode valid transitions between them.
-Representative algorithms in this family include Dijkstra's algorithm, A*, D* (and its incremental variant D* Lite), and hybrid A*.
+Representative algorithms in this family include Dijkstra's algorithm, A*, and hybrid A*.
 
 Dijkstra's algorithm solves the single-source shortest-path problem by iteratively relaxing edge costs outward from the start node until the goal is reached.
 A* extends Dijkstra's search with a heuristic that estimates the remaining cost to the goal, biasing expansion toward promising regions and typically reducing the number of explored nodes.
-D* and D* Lite address dynamic environments by efficiently replanning when previously free cells become occupied.
-Hybrid A* further combines discrete graph search with continuous vehicle kinematics, connecting lattice nodes through dynamically feasible arcs so that the resulting path respects non-holonomic constraints \cite{gonzalez_ReviewMotionPlanning_2016}.
+Hybrid A* further combines discrete graph search with continuous vehicle kinematics, connecting lattice nodes through dynamically feasible arcs so that the resulting path respects the vehicle's steering limits and minimum turning radius \cite{gonzalez_ReviewMotionPlanning_2016}.
 
 These methods have been deployed extensively in autonomous driving.
 During the DARPA Urban Challenge, Boss used a layered planning architecture whose motion-planning layer combined behavioral reasoning with graph-based search to navigate urban traffic \cite{urmson_autonomous_2008}.
 Hybrid A* and lattice-based search were likewise adopted by several Urban Challenge entrants to generate kinematically feasible trajectories in structured road networks \cite{gonzalez_ReviewMotionPlanning_2016}.
 
-The principal drawbacks of graph and search planners are tied to discretization.
+The principal drawbacks of graph and search planners are tied to their discretization.
 Coarse grids can miss narrow passages or produce paths that are not dynamically feasible, whereas fine grids improve resolution at the cost of memory occupancy and query time, which becomes prohibitive over large operational areas \cite{gonzalez_ReviewMotionPlanning_2016, loganathan_systematic_2023}.
 Collision checking along candidate edges and the discrete choice of which node to expand next introduce further hard decisions into the pipeline.
 From the perspective of differentiable modular stacks, this is a critical limitation: the planner output is a piecewise-constant function of its inputs, so gradients cannot flow through the discrete search and selection steps that define the final path \cite{koch_DifferentiableInterpretablePath_2025, karkus_DiffStackDifferentiableModular_2022}.
@@ -432,24 +436,94 @@ The optimally planned path is passed to the differentiable Model Predictive Cont
 To complete the evaluation of the plan, a motion model is used to simulate the resulting pose which arises from the control commands posted to the car.
 Finally, the loss function is computed at the end which combines all the previous streams of modules to compute a loss component for each module to train them.
 
-\begin{figure}[hb]
+\begin{figure}[ht!]
     \centering
-    \begin{tikzpicture}
-        \node[name=perc, shape=rectangle, draw=yellow, fill=yellow!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm] at (2, 0) {Perception};
-        \node[name=pred, shape=rectangle, draw=orange, fill=orange!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm] at (2, -2) {Prediction};
-        % \draw[->, black, very thick] (sensors.north) -- node[midway, above] {Data} (1.2, -2.3) -- (1.2, 0) -- (perc.north);
-        % \node[name=pred, shape=rectangle, draw=orange, fill=orange!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (5.5, 0) {Prediction};
-        % \draw[->, yellow, very thick] (perc.320) -- node[midway, above, black] {Environment} (pred.40);
-        % \draw[->, yellow, very thick] (perc.220) -- node[midway, below, black] {Ego Pose} (pred.140);
-        \node[name=plan, shape=rectangle, draw=blue, fill=blue!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm] at (7, -1) {Planning};
-        \draw[->, orange, very thick] (pred.east) -- node[midway, above, black] {State Estimation} (plan.west);
-        \node[name=ctrl, shape=rectangle, draw=green, fill=green!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm] at (10, 0) {Control};
-        \draw[->, blue, very thick] (plan.east) -- node[midway, above, black] {Trajectory} (ctrl.west);
-        % \node[name=act, shape=rectangle, draw=black, fill=gray!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (10.5,-2.3) {Actuators};
-        % \draw[->, black, very thick] (ctrl.south) -- (13.5, 0) -- (13.5, -2.3) -- node[midway, above] {Actuation} (act.south);
+    \usetikzlibrary{positioning, arrows.meta, calc}
+    \begin{tikzpicture}[
+        comp/.style={rectangle, draw, very thick, rounded corners, align=center, font=\small},
+        inner/.style={rectangle, draw, thick, rounded corners, align=center, font=\scriptsize},
+        flow/.style={-{Stealth[length=2mm]}, very thick},
+        grad/.style={-{Stealth[length=2mm]}, thick, dashed, gray},
+        lbl/.style={font=\scriptsize, fill=white, inner sep=1pt},
+        gradlbl/.style={font=\scriptsize, text=gray!70!black, fill=white, inner sep=1pt},
+    ]
+        % --- Perception: CNN only ---
+        \node[comp, draw=yellow, fill=yellow!10, minimum width=2.8cm, minimum height=2.2cm] (perc) at (0, 1.6) {};
+        \node[font=\small\bfseries] at (0, 2.45) {Perception};
+        % Centered 1D-CNN icon (three stacked conv layers)
+        \coordinate (cnn_base) at (-0.63, 0.95);
+        \foreach \i in {0,1,2} {
+            \draw[fill=yellow!45, draw=yellow!70!black, thick, rounded corners=0.5pt]
+                ([xshift=\i*1.8mm, yshift=\i*1.2mm]cnn_base) rectangle
+                ([xshift=\i*1.8mm+9mm, yshift=\i*1.2mm+5.5mm]cnn_base);
+        }
+        \node[font=\scriptsize] at (0, 0.65) {1D-CNN};
+
+        % --- Prediction: empty shell below perception ---
+        \node[comp, draw=orange, fill=orange!8, minimum width=2.8cm, minimum height=1cm] (pred) at (0, -0.6) {};
+        \node[font=\small\bfseries] at (0, -0.6) {Prediction};
+
+        % --- Planning ---
+        \node[comp, draw=blue, fill=blue!8, minimum width=3.6cm, minimum height=3.8cm] (plan) at (6.2, 0.5) {};
+        \node[font=\small\bfseries] at (6.2, 2.15) {Planning};
+        \node[inner, draw=blue, fill=blue!15, minimum width=2.8cm, minimum height=0.65cm] (sample) at (6.2, 1.35) {Sample generation};
+        \node[inner, draw=blue, fill=blue!15, minimum width=2.8cm, minimum height=0.65cm] (assess) at (6.2, 0.35) {Assessment};
+        \node[inner, draw=blue, fill=blue!15, minimum width=2.8cm, minimum height=0.65cm] (select) at (6.2, -0.65) {Sample selection};
+        \draw[flow, blue] (sample.south) -- (assess.north);
+        \draw[flow, blue] (assess.south) -- (select.north);
+
+        % --- Control ---
+        \node[comp, draw=green, fill=green!8, minimum width=3.2cm, minimum height=2.8cm] (ctrl) at (11.0, 0.5) {};
+        \node[font=\small\bfseries] at (11.0, 1.7) {Control};
+        \node[inner, draw=green, fill=green!15, minimum width=2.4cm, minimum height=0.75cm] (diffmpc) at (11.0, 0.65) {DiffMPC};
+        \node[inner, draw=green, fill=green!15, minimum width=2.4cm, minimum height=0.75cm] (motion) at (11.0, -0.45) {Motion model};
+        \draw[flow, green!70!black] (diffmpc.south) -- (motion.north);
+
+        % --- Loss ---
+        \node[comp, draw=purple, fill=purple!10, minimum width=2.8cm, minimum height=0.75cm] (loss) at (11.0, -2.35) {Loss calculation};
+
+        % --- Forward data flow ---
+        \draw[flow, black!70] ($(perc.west)+(-2.3,0)$) -- node[lbl, above] {LiDAR scan} (perc.west);
+        \draw[flow, yellow!70!black] (perc.east) -- node[lbl, above] {Pose} (sample.west);
+        \draw[flow, orange] (pred.east) to[out=10, in=170]
+            node[lbl, pos=0.42, above] {Obstacle locations} ($(sample.west)+(0,0.12)$);
+        \draw[flow, orange] (pred.east) to[out=-10, in=190]
+            node[lbl, pos=0.42, below] {Opponent waypoints} ($(sample.west)+(0,-0.12)$);
+        \draw[flow, blue] (select.east) -- node[lbl, above] {Trajectory} (diffmpc.west);
+        \draw[flow, green!70!black] (motion.south) -- (loss.north);
+
+        % --- Gradient backpropagation ---
+        % Every grad arrow is drawn parallel to its forward counterpart with a
+        % consistent offset (vertical arrows shifted left of the midline,
+        % horizontal arrows shifted below) so the dashed grey path stays clearly
+        % separated from the solid forward flow.
+        % (a) Loss -> motion model (offset left of the forward motion->loss arrow).
+        \draw[grad] ($(loss.north)+(-0.3,0)$) -- ($(motion.south)+(-0.3,0)$);
+        % (b) Motion model -> DiffMPC (offset left of internal control arrow).
+        \draw[grad] ($(motion.north)+(-0.3,0)$) -- ($(diffmpc.south)+(-0.3,0)$);
+        % (c) DiffMPC -> Sample selection (below the trajectory arrow).
+        \draw[grad] ($(diffmpc.west)+(0,-0.25)$) --
+            node[gradlbl, below] {$\nabla$ selection}
+            ($(select.east)+(0,-0.25)$);
+        % (d) Sample selection -> Assessment -> Sample generation (offset left of
+        %     the internal planning arrows). Straight-Through-Gumbel-Softmin lets
+        %     gradients flow across the discrete arg-min.
+        \draw[grad] ($(select.north)+(-0.3,0)$) -- ($(assess.south)+(-0.3,0)$);
+        \draw[grad] ($(assess.north)+(-0.3,0)$) -- ($(sample.south)+(-0.3,0)$);
+        % (e) Sample generation -> Perception (below the Pose arrow) into DiffLoc.
+        \draw[grad] ($(sample.west)+(0,-0.25)$) --
+            node[gradlbl, below] {$\nabla\theta_j,\,\nabla\phi_{\text{DiffLoc}}$}
+            ($(perc.east)+(0,-0.25)$);
+        % (f) Direct localization loss supervision to perception. Routed above
+        %     the diagram (right of control, over the top, down to perception)
+        %     so it never crosses the forward pipeline.
+        \draw[grad] (loss.east) -- (13.2,-2.35) -- (13.2, 3.4)
+            -- node[gradlbl, above] {$\mathcal{L}_{\text{loc}}$} (0, 3.4)
+            -- (perc.north);
     \end{tikzpicture}
-    %* fix citation
-    \caption{High-level DiffPlan pipeline showing perception, prediction, and planning modules. Arrows indicate the data flow from environment state estimation to trajectory generation.}
+    \caption{DiffPlan architecture with internal module layout.
+    Solid arrows denote forward data flow.
+    Dashed grey arrows trace gradient backpropagation through every differentiable stage: $\mathcal{L}_{\text{prog}}$, $\mathcal{L}_{\text{coll}}$, and $\mathcal{L}_{\text{rl}}$ flow backward through the motion model, DiffMPC, Gumbel-Softmin selection, assessment, and sample generation into DiffLoc, while $\mathcal{L}_{\text{loc}}$ provides a direct supervision path to perception; prediction is omitted from the gradient path because it supplies ground-truth environment data rather than learned estimates \cite{koch_DifferentiableInterpretablePath_2025, swadiryus_DifferentiableMotionPlanning_2025}.}
     \label{fig:diffplan-architecture}
 \end{figure}
 
@@ -638,11 +712,12 @@ and the trajectory-level curvature cost is obtained by summing over the planning
 
 \subsubsection{Slow-driving cost}
 Koch adds a slow-driving cost to reward forward progress independently of the raceline reference velocity \cite{koch_DifferentiableInterpretablePath_2025}.
-This term is proportional to the inverse of the average speed along the candidate trajectory and therefore penalizes unnecessarily conservative plans, which is particularly useful during overtaking when the reference velocity may be suboptimal.
-% TODO: insert explicit mathematical definition if required by examiner
+The term itself is the mean planned speed along the candidate trajectory,
 \begin{equation}
-    C
+    C_{\text{slow}} = \frac{1}{T}\sum_{t=0}^{T-1} V_t,
 \end{equation}
+and is combined with a negative trainable weight in the total cost sum, so that faster candidates receive a lower overall score.
+This penalizes unnecessarily conservative plans, which is particularly useful during overtaking when the raceline reference velocity may be suboptimal.
 
 \subsubsection{Velocity cost}
 The velocity cost penalizes deviations from a reference speed profile and keeps the planned motion aligned with the target or raceline velocity \cite{swadiryus_DifferentiableMotionPlanning_2025, koch_DifferentiableInterpretablePath_2025}.
@@ -684,13 +759,32 @@ Koch describes the adversary variant of this term more qualitatively as assignin
 
 \subsubsection{Wall-proximity cost}
 Rather than rejecting wall-intersecting samples with a hard feasibility check, Koch replaces the binary wall constraint with a continuous penalty that grows as a candidate approaches the track boundary \cite{koch_DifferentiableInterpretablePath_2025}.
-The wall cost is inversely proportional to the distance from the trajectory to the nearest track wall, encouraging the planner to maintain a safety buffer while still allowing learnable trade-offs between aggression and collision risk.
-% TODO: insert explicit mathematical definition if required by examiner
+At each waypoint $t$ of the candidate, the lateral clearance to the left and right track boundaries is computed from the interpolated track widths $w_{\text{L}}(s_t)$ and $w_{\text{R}}(s_t)$ and the lateral offset $n_t$,
+\begin{equation}
+    d_{\text{L}, t} = w_{\text{L}}(s_t) - n_t, \qquad d_{\text{R}, t} = n_t + w_{\text{R}}(s_t).
+\end{equation}
+To retain a differentiable objective, the nearest-wall distance is obtained via a softmin with temperature $\tau_w$,
+\begin{equation}
+    d_{\min, t} = \sum_{i \in \{\text{L}, \text{R}\}} \frac{\exp(-d_{i,t} / \tau_w)}{\sum_{j} \exp(-d_{j,t} / \tau_w)} \cdot d_{i, t}.
+\end{equation}
+A safety margin $d_{\text{safe}}$ then triggers a fourth-power penalty on the shortfall, weighted per waypoint by $\alpha_t$ (with early waypoints emphasized to prioritize near-term safety):
+\begin{equation}
+    \delta_t = \max(0,\; d_{\text{safe}} - d_{\min, t}), \qquad C_{\text{wall}} = \sum_{t=0}^{T-1} \alpha_t \, \delta_t^{\,4}.
+\end{equation}
+The exponent sharpens the penalty as the candidate approaches the boundary while remaining smoothly differentiable, encouraging the planner to maintain a safety buffer while still allowing learnable trade-offs between aggression and collision risk.
 
 \subsubsection{Jitter cost}
-To reduce path oscillations between consecutive planning cycles, Koch includes a jitter penalty that measures the deviation of each candidate from the trajectory selected in the previous timestep \cite{koch_DifferentiableInterpretablePath_2025}.
+To reduce path oscillations between consecutive planning cycles, Koch includes a jitter penalty that measures the deviation of each candidate from the trajectory selected in the previous planning step \cite{koch_DifferentiableInterpretablePath_2025}.
+Let $(s^{\text{prev}}_t, n^{\text{prev}}_t)$ denote the Frenet coordinates of the previously chosen trajectory at waypoint $t$, and let $s_{\text{end}}$ be the track length. The waypoint-wise separation is
+\begin{equation}
+    \Delta s_t = \min\!\left(|s_t - s^{\text{prev}}_t|,\; s_{\text{end}} - |s_t - s^{\text{prev}}_t|\right), \qquad \Delta n_t = |n_t - n^{\text{prev}}_t|,
+\end{equation}
+where the wrap-around in $\Delta s_t$ handles the start/finish-line periodicity of the closed racetrack.
+The jitter cost is then the sum of squared Frenet-plane distances,
+\begin{equation}
+    C_{\text{jit}} = \sum_{t=0}^{T-1} \left(\Delta s_t^{\,2} + \Delta n_t^{\,2}\right).
+\end{equation}
 This term stabilizes control by making the planner prefer spatially consistent plans unless a large improvement in the other cost terms justifies switching to a different maneuver, such as passing an obstacle on the opposite side.
-% TODO: insert explicit mathematical definition if required by examiner
 
 \subsubsection{Nonlinear coupling costs}
 Koch further introduces four nonlinear coupling terms formed from products of the baseline costs, each with its own trainable weight \cite{koch_DifferentiableInterpretablePath_2025}:
@@ -750,25 +844,12 @@ Straight-Through-Gumbel-Softmin proceeds as follows \cite{koch_DifferentiableInt
     \State $y_{\text{soft}} \gets \operatorname{softmin}(\tilde{c}/\tau)$
     \State $k \gets \operatorname{argmin}(\tilde{c})$
     \State Initialize $y_{\text{hard}}$ as a one-hot vector of length $N$ with a 1 at index $k$
-    \State $y_{\text{select}} \gets \operatorname{sg}[y_{\text{hard}} - y_{\text{soft}}] + y_{\text{soft}}$
+    \State $y_{\text{select}} \gets \operatorname{sg}[y_{\text{hard}} - y_{\text{soft}}] + y_{\text{soft}}$ \Comment{where $\operatorname{sg}[\cdot]$ stops gradients}
     \State $s_{\text{select}} \gets S^{\top} y_{\text{select}}$
     \State \Return $s_{\text{select}}$
 \end{algorithmic}
 \end{algorithm}
 
-% ! fix this
-\begin{enumerate}
-    \item Draw uniform noise $u \sim \mathcal{U}(0,1)$ and convert it to Gumbel noise $g = -\ln(-\ln u)$.
-    \item Form perturbed costs $\tilde{\mathbf{c}} = \mathbf{c} + \tau g$, where $\tau > 0$ is a temperature parameter.
-    \item Compute the soft selection vector $\mathbf{y}_{\text{soft}} = \operatorname{softmin}(\tilde{\mathbf{c}} / \tau)$.
-    \item Identify the hard winner $k = \arg\min_i \tilde{c}_i$ and set $\mathbf{y}_{\text{hard}} = \mathbf{1}_k$.
-    \item Combine both with the straight-through trick
-    \begin{equation}
-        \mathbf{y}_{\text{select}} = \operatorname{sg}[\mathbf{y}_{\text{hard}} - \mathbf{y}_{\text{soft}}] + \mathbf{y}_{\text{soft}},
-    \end{equation}
-    where $\operatorname{sg}[\cdot]$ stops gradients through the hard term during backpropagation.
-    \item Return the selected trajectory $s_{\text{select}} = S^{\top}\mathbf{y}_{\text{select}}$.
-\end{enumerate}
 During the forward pass, the stop-gradient term makes $\mathbf{y}_{\text{select}} = \mathbf{y}_{\text{hard}}$, so the planner executes exactly one candidate trajectory.
 During the backward pass, gradients flow through $\mathbf{y}_{\text{soft}}$, approximating how downstream loss would change if each candidate contributed more or less to the selection \cite{koch_DifferentiableInterpretablePath_2025}.
 
@@ -921,7 +1002,6 @@ Then
     \label{eq:DiffPlanCtrlLoss}
 \end{equation}
 where the first term penalizes lateral deviation from the reference path, the second penalizes heading mismatch, and the third is a second-order finite difference that discourages abrupt orientation changes \cite{swadiryus_DifferentiableMotionPlanning_2025}.
-Typical weightings are $\alpha_{\text{ct}} = 5$, $\alpha_{h} = 0$, and $\alpha_{o} = 1$ \cite{swadiryus_DifferentiableMotionPlanning_2025}.
 
 Koch does not use Eq.~\eqref{eq:DiffPlanCtrlLoss} directly as the downstream supervisory signal.
 Instead, the controller output is passed through the differentiable motion model described above, and the propagated pose is evaluated with the progress, collision-proximity, and raceline losses defined below \cite{koch_DifferentiableInterpretablePath_2025}.
@@ -970,17 +1050,17 @@ The loss combines fourth-power penalties on lateral and heading error:
 \end{equation}
 Raising the errors to the fourth power makes the penalty more sensitive to large deviations than a quadratic form, while the $0.5$ factor balances the relative influence of position and heading \cite{koch_DifferentiableInterpretablePath_2025}.
 
-\subsection{Loss Selection and Training Practice}
+% \subsection{Loss Selection and Training Practice}
 
-The active loss terms and their weights $\alpha_i$ are chosen per training scenario \cite{koch_DifferentiableInterpretablePath_2025, swadiryus_DifferentiableMotionPlanning_2025}.
-Raceline and lap-time co-optimization on the Red Bull Ring combines $\mathcal{L}_{\text{rl}}$, $\mathcal{L}_{\text{prog}}$, and $\mathcal{L}_{\text{coll}}$ \cite{koch_DifferentiableInterpretablePath_2025}.
-Static obstacle avoidance relies primarily on the collision proximity term.
-Head-to-head overtaking on the FTM Oval uses $\mathcal{L}_{\text{prog}}$, $\mathcal{L}_{\text{coll}}$ (including wall proximity), and $\mathcal{L}_{\text{rl}}$, with cost weights initialized so that the ego vehicle follows the opponent rather than overtaking in the first lap \cite{koch_DifferentiableInterpretablePath_2025}.
+% The active loss terms and their weights $\alpha_i$ are chosen per training scenario \cite{koch_DifferentiableInterpretablePath_2025, swadiryus_DifferentiableMotionPlanning_2025}.
+% Raceline and lap-time co-optimization on the Red Bull Ring combines $\mathcal{L}_{\text{rl}}$, $\mathcal{L}_{\text{prog}}$, and $\mathcal{L}_{\text{coll}}$ \cite{koch_DifferentiableInterpretablePath_2025}.
+% Static obstacle avoidance relies primarily on the collision proximity term.
+% Head-to-head overtaking on the FTM Oval uses $\mathcal{L}_{\text{prog}}$, $\mathcal{L}_{\text{coll}}$ (including wall proximity), and $\mathcal{L}_{\text{rl}}$, with cost weights initialized so that the ego vehicle follows the opponent rather than overtaking in the first lap \cite{koch_DifferentiableInterpretablePath_2025}.
 
-Two practical modifications stabilize learning.
-First, gradients are suppressed during the first $7.5\%$ of each lap to avoid large parameter updates caused by poor initialization at standstill or far from the raceline, conditions for which the planner is not responsible \cite{koch_DifferentiableInterpretablePath_2025}.
-Second, Koch applies gradients after collision events so that high-magnitude collision penalties actively update cost weights toward safer behavior in subsequent laps \cite{koch_DifferentiableInterpretablePath_2025}.
-Swadiryus instead trains localization and planner modules with separate Adam optimizers at learning rates of $9 \times 10^{-8}$ and $1 \times 10^{-5}$ respectively, reflecting the different convergence dynamics of the neural localization network and the planner cost weights \cite{swadiryus_DifferentiableMotionPlanning_2025}.
+% Two practical modifications stabilize learning.
+% First, gradients are suppressed during the first $7.5\%$ of each lap to avoid large parameter updates caused by poor initialization at standstill or far from the raceline, conditions for which the planner is not responsible \cite{koch_DifferentiableInterpretablePath_2025}.
+% Second, Koch applies gradients after collision events so that high-magnitude collision penalties actively update cost weights toward safer behavior in subsequent laps \cite{koch_DifferentiableInterpretablePath_2025}.
+% Swadiryus instead trains localization and planner modules with separate Adam optimizers at learning rates of $9 \times 10^{-8}$ and $1 \times 10^{-5}$ respectively, reflecting the different convergence dynamics of the neural localization network and the planner cost weights \cite{swadiryus_DifferentiableMotionPlanning_2025}.
 
-In Swadiryus's stack, $\mathcal{L}_{\text{plan}}$ updates the cost weights $w_j$, while $\mathcal{L}_{\text{ctrl}}$ and $\mathcal{L}_{\text{loc}}$ jointly fine-tune localization; gradients from the controller do not reach the planner cost parameters \cite{swadiryus_DifferentiableMotionPlanning_2025}.
-Koch's formulation extends this path so that $\mathcal{L}_{\text{prog}}$, $\mathcal{L}_{\text{coll}}$, and $\mathcal{L}_{\text{rl}}$ propagate through the motion model and DiffMPC, through Straight-Through-Gumbel-Softmin sample selection, and into the eleven trainable planner weights $\theta_j$, realizing the end-to-end cost-weight learning that the original DiffPlan architecture anticipated but could not fully achieve \cite{koch_DifferentiableInterpretablePath_2025, swadiryus_DifferentiableMotionPlanning_2025}.
+% In Swadiryus's stack, $\mathcal{L}_{\text{plan}}$ updates the cost weights $w_j$, while $\mathcal{L}_{\text{ctrl}}$ and $\mathcal{L}_{\text{loc}}$ jointly fine-tune localization; gradients from the controller do not reach the planner cost parameters \cite{swadiryus_DifferentiableMotionPlanning_2025}.
+% Koch's formulation extends this path so that $\mathcal{L}_{\text{prog}}$, $\mathcal{L}_{\text{coll}}$, and $\mathcal{L}_{\text{rl}}$ propagate through the motion model and DiffMPC, through Straight-Through-Gumbel-Softmin sample selection, and into the eleven trainable planner weights $\theta_j$, realizing the end-to-end cost-weight learning that the original DiffPlan architecture anticipated but could not fully achieve \cite{koch_DifferentiableInterpretablePath_2025, swadiryus_DifferentiableMotionPlanning_2025}.

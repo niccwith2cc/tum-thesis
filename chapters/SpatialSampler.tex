@@ -290,17 +290,17 @@ Feasible endpoints are confined to the drivable corridor at $s_0 + S$, accountin
 Within this interval, a coarse set of endpoints spans the full corridor width, while an additional dense set is distributed in a neighborhood of the current lateral position $n_0$ to capture small corrective maneuvers near the raceline.
 If the corridor collapses below the sampling width, a single midpoint endpoint is used.
 
-\subsection{Longitudinal Speed Assignment}
+% \subsection{Longitudinal Speed Assignment}
 
-Each lateral endpoint is combined with a set of velocity scale factors $\lambda \in [\lambda_{\min},\, \lambda_{\max}]$ that modulate the online reference speed along the spatial horizon.
-At arc length $s(q)$, the speed assigned to a candidate is
-\begin{equation}
-    V(q,\lambda) = \lambda \cdot V_{\text{ref}}\!\left(s(q)\right),
-    \label{eq:velScale}
-\end{equation}
-where $V_{\text{ref}}$ is interpolated from the FW-BW profile of Section~\ref{section:OnlineVelocityProfile}.
-The first point of every candidate is pinned to the current speed magnitude $v_0$ to preserve continuity with the ego state.
-The Cartesian product of lateral endpoints and velocity scales yields the finite candidate set over which the planner optimizes.
+% Each lateral endpoint is combined with a set of velocity scale factors $\lambda \in [\lambda_{\min},\, \lambda_{\max}]$ that modulate the online reference speed along the spatial horizon.
+% At arc length $s(q)$, the speed assigned to a candidate is
+% \begin{equation}
+%     V(q,\lambda) = \lambda \cdot V_{\text{ref}}\!\left(s(q)\right),
+%     \label{eq:velScale}
+% \end{equation}
+% where $V_{\text{ref}}$ is interpolated from the FW-BW profile of Section~\ref{section:OnlineVelocityProfile}.
+% The first point of every candidate is pinned to the current speed magnitude $v_0$ to preserve continuity with the ego state.
+% The Cartesian product of lateral endpoints and velocity scales yields the finite candidate set over which the planner optimizes.
 
 \subsection{Conversion to the Temporal Domain}
 

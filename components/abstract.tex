@@ -12,10 +12,11 @@
 \vspace{1cm}
 
 This thesis addresses the computational limitations of DiffPlan, a differentiable sampling-based local motion planner for autonomous racing on the RoboRacer platform.
-Prior work showed that gradients from downstream control objectives can be backpropagated through the planner to co-train localization and learnable cost weights, but the original implementation was too slow for stable real-time operation on the physical vehicle.
-The work presented here pursues two complementary directions: accelerating the existing temporal planner through vectorization of trajectory sampling and loss evaluation, and introducing DiffSpatialPlan, a spatial sampling variant that computes an online velocity profile and apex-aware trajectory candidates along a fixed raceline while remaining fully differentiable and compatible with the existing ROS\,2 stack.
-The optimizations replace sequential Python loops with a combination of loop vectorization and batched tensor operations, raising the drive-command publish rate from $13.2$\,Hz to $34.12$\,Hz ($2.59\times$ speedup) and bringing differentiable planning closer to onboard real-time feasibility.
-DiffSpatialPlan itself achieves $30.66$\,Hz ($2.33\times$ relative to the baseline), demonstrating that the spatial formulation remains computationally competitive despite its additional velocity-profiling stage.
+Prior work showed that gradients from downstream control losses can be backpropagated through the planner to co-train localization and learnable cost weights, but the original implementation was too slow for stable real-time operation on the physical vehicle.
+Two complementary directions are pursued: accelerating the temporal planner through vectorization of trajectory sampling and loss evaluation, and introducing DiffSpatialPlan, a spatial sampling variant that computes an online velocity profile and apex-aware trajectory candidates along a fixed raceline while remaining fully differentiable and compatible with the ROS\,2 stack.
+A GPU-offloading study additionally shows that partial migration to the accelerator is counterproductive while the differentiable MPC controller still solves its LQR sub-problem sequentially on the CPU.
+The vectorized DiffPlan raises the drive-command publish rate from $13.2$\,Hz to $34.1$\,Hz ($2.59\times$ speedup), and DiffSpatialPlan reaches $30.7$\,Hz on the same workstation.
 Both planners are benchmarked in the F1TENTH Gym simulator on three racetracks and on the physical FTM Oval circuit under identical training objectives.
-Across the completed simulation experiments, DiffSpatialPlan consistently records the fastest lap times.
-These results indicate that spatial sampling with online velocity adaptation yields superior performance relative to purely temporal trajectory generation, while vectorization makes the differentiable planning stack practical for embedded deployment on RoboRacer hardware.
+In simulation, DiffSpatialPlan consistently records the fastest lap times and is more robust on the boundary-constrained Austria circuit, whereas DiffPlan maintains tighter adherence to the offline raceline.
+On the physical FTM Oval, both planners train successfully under motion-capture localization, but a hardware-imposed speed ceiling compresses the spatial planner's simulated lap-time advantage.
+Overall, vectorization reduces the differentiable planning footprint to a level at which on-board deployment becomes plausible, pending migration of the controller to a fully parallelizable differentiable formulation.

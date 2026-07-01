@@ -22,8 +22,8 @@ The original implementation as abstracted in pseudocode is shown in Algorithm~\r
 \caption{Original Longitudinal Sampling}
 \label{alg:orig-long-sampling}
 \begin{algorithmic}[1]
-% \Require Initial position $s_{start}$, clamped initial velocity $\dot{s}_{init}$, time vector $\mathbf{t} \in \mathbb{R}^{m}$, target end velocities $\mathbf{v}_{end} \in \mathbb{R}^{N}$, duplication factor $n$, track length $L$
-% \Ensure Position trajectories $\mathbf{S}$, velocity trajectories $\dot{\mathbf{S}}$, end positions $\mathbf{s}_{end}$
+\Require Initial position $s_{start}$, clamped initial velocity $\dot{s}_{init}$, time vector $\mathbf{t} \in \mathbb{R}^{m}$, target end velocities $\mathbf{v}_{end} \in \mathbb{R}^{N}$, duplication factor $n$, track length $L$
+\Ensure Position trajectories $\mathbf{S}$, velocity trajectories $\dot{\mathbf{S}}$, end positions $\mathbf{s}_{end}$
 \State $t_{end} \gets \mathbf{t}[m]$ \Comment{Final time step}
 \State $\mathbf{A} \gets \begin{pmatrix} 1 & 0 & 0 \\ 0 & 1 & 0 \\ 0 & 1 & 2 t_{end} \end{pmatrix}$
 \State Initialize empty matrices $\mathbf{S}$, $\dot{\mathbf{S}}$ and empty vector $\mathbf{s}_{end}$
@@ -43,7 +43,7 @@ The original implementation as abstracted in pseudocode is shown in Algorithm~\r
 \end{algorithmic}
 \end{algorithm}
 
-% \newpage
+\newpage
 The outer loop runs $N$ times, once per sampled terminal velocity, and the inner loop duplicates each trajectory $n$ times before lateral sampling combines the results.
 Although solving a single $3 \times 3$ system costs only $O(1)$ arithmetic, the implementation performs $N$ separate solves and $N \cdot n$ list append operations under the Python interpreter.
 The overall complexity is therefore $O(N \cdot m \cdot n)$ in floating-point work, but the dominant cost is the $O(N \cdot n)$ sequential loop iterations.
