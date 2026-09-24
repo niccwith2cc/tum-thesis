@@ -23,7 +23,7 @@ The prediction unit then estimates future states based on an end goal, such as p
 Using this forecast, the planning unit computes a trajectory that the ego vehicle can safely follow.
 Ultimately, the control unit takes this trajectory and sends commands to the car.
 
-\begin{figure}[hb]
+\begin{figure}[ht!]
     \centering
     \begin{tikzpicture}
         \node[name=sensors, shape=rectangle, draw=black, fill=gray!15, very thick, rounded corners, minimum width=1.6cm, minimum height=0.8cm, rotate=90] at (4,-2.3) {Sensors};
@@ -82,6 +82,7 @@ This is achieved through computational optimizations such as vectorization, just
 Additionally, this thesis investigates an alternative local-motion-planning method that uses spatial sampling to generate an online velocity profile.
 A series of experiments will be conducted to measure the speedup achieved by the optimized algorithms and benchmark the two differentiable local motion planners against each other: The temporal sampler DiffPlan and the spatial sampler DiffSpatialPlan.
 
+\newpage
 Part \ref{part:stateoftheart} presents the literature review of past and current methods of autonomous vehicle systems in Chapter \ref{chapter:AutonomousDrivingSystems}.
 %? to the mathematical foundations to describe the workings of motion planners and the subsequent branch of differentiable motion planners.
 In addition, the state-of-the-art methods of motion planners, which allow autonomous navigation of vehicles, are discussed in Chapter \ref{chapter:MotionPlanners}.

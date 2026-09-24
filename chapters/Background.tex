@@ -5,7 +5,7 @@
 
 %* fix the phrasing and continue to expand the current idea
 %! fix the paragraph to eventually reflect the full text which encompasses the ADS
-This chapter presents a more detailed and technical description of previous approaches, emphasizing the shortcomings that motivate a more universal yet safe implementation of autonomous navigation systems.
+This chapter presents a more detailed and technical description of previous approaches, emphasizing the shortcomings that would eventually motivate a more universal yet safe implementation of autonomous navigation systems.
 
 \section{Modular Stack}
 \label{section:ModularStack}
@@ -16,7 +16,7 @@ The Defense Advanced Research Projects Agency (DARPA) Grand Challenges of 2004 a
 Engineers described the challenge as solving a software problem, defining deterministic rules and interfaces for each step of the cohesive pipeline \cite{thrun_stanley_2006, montemerlo_winning_2006}.
 
 A robot named Stanley became the first unmanned vehicle to traverse the 212\,km course at the 2005 DARPA Grand Challenge \cite{tampuu_SurveyEndtoEndDriving_2022, hoffmann_AutonomousAutomobileTrajectory_2007, thrun_stanley_2006}.
-Stanley's software pipeline is described as comprising of approximately 30 modules organized into six functional layers \cite{tampuu_SurveyEndtoEndDriving_2022, thrun_stanley_2006, montemerlo_winning_2006}.
+The software pipeline was described as comprising of approximately 30 modules organized into six functional layers \cite{tampuu_SurveyEndtoEndDriving_2022, thrun_stanley_2006, montemerlo_winning_2006}.
 Fusing input data from various cameras, laser range finders, and other positional sensors, the pipeline routed this stream through the perception layer to construct the surrounding environment and the vehicle's orientation within it \cite{thrun_stanley_2006}.
 %? There was no global path planning involved (change: the role of Stanley’s path planner is primarily local obstacle avoidance.)
 The team achieved high-speed driving and careful local obstacle avoidance through extensive tweaking: Iteratively refining software components and tuning modules in isolation until the full vehicle exhibited the desired behavior \cite{thrun_stanley_2006, montemerlo_winning_2006}.
@@ -44,7 +44,7 @@ In literature, end-to-end driving models are predominantly trained under one of 
 
 Imitation Learning (IL) frames driving as a supervised learning problem in which the model is trained to reproduce the behavior of an expert human demonstrator \cite{tampuu_SurveyEndtoEndDriving_2022, hu_review_2026, chib_recent_2023}.
 During data collection, sensor observations and corresponding expert actions are recorded in pairs.
-Convolutional Neural Networks (CNNs) are commonly paired with IL models, as they are well suited to processing the high-dimensional visual data produced by the vehicle's cameras \cite{bojarski_EndtoEndLearningSelfDriving_2016, kocic_end-to-end_2019, lee_autonomous_2020, hu_learning_2021}.
+Convolution Neural Networks (CNNs) are commonly paired with IL models, as they are well suited to processing the high-dimensional visual data produced by the vehicle's cameras \cite{bojarski_EndtoEndLearningSelfDriving_2016, kocic_end-to-end_2019, lee_autonomous_2020, hu_learning_2021}.
 CNNs extract spatial features from raw images and condense them into a compact representation that captures the driving scene, which is then mapped onto the corresponding driving action \cite{kocic_end-to-end_2019, hu_learning_2021}.
 The network is then optimized to minimize the discrepancy between its own predicted actions and those of the expert over the collected dataset \cite{hu_review_2026, tampuu_SurveyEndtoEndDriving_2022}.
 At inference time, the learned policy emits an action based on the current surrounding state, ideally generalizing the demonstrated behavior to previously unseen situations \cite{tampuu_SurveyEndtoEndDriving_2022, kocic_end-to-end_2019}.
@@ -104,7 +104,7 @@ Furthermore, the prediction task can be enhanced by feeding the data into a tail
 Both of these tasks then shift to a learning-based method.
 %? Include partial combination of NN methods with early exit of the stack to increase interpretability
 However, this approach only achieves partial, unit specific optimizations rather than finding a full system optimization.
-Similary, there have been several varying degrees of hybridization between the modular and end-to-end neural network approaches.
+Additionally, there have been several varying degrees of hybridization between the modular and end-to-end neural network approaches.
 The following subsections introduce a handful of the implementations that have had successes in their hybridization.
 
 \subsection{UniAD}
@@ -118,29 +118,30 @@ The following subsections introduce a handful of the implementations that have h
 % \cite{hu_planning-UniAD_2023}
 %! refine
 %? a query is the input vector or token that represents the specific information being sought or the context from which attention is being paid
-Hu et al. \cite{hu_planning-UniAD_2023} propose Unified Autonomous Driving (UniAD), a planning-oriented stack that keeps the familiar perception, prediction, and planning decomposition but trains every stage inside one transformer network \cite{vaswani_AttentionAllYou_2017}.
-Rather than optimizing each task separately, the authors rearrange the pipeline so that intermediate outputs exist primarily to support the final ego-planning decision.
+Hu et al. \cite{hu_planning-UniAD_2023} propose Unified Autonomous Driving (UniAD), a planning-oriented stack that utilizes the standard decomposition of tasks: perception, prediction, and planning but trains every stage inside one transformer network \cite{vaswani_AttentionAllYou_2017}.
+The authors rearrange the pipeline so that intermediate outputs exist primarily to support the final ego-planning decision.
 
 Architecturally, UniAD starts from gathering multi-camera image sequences and constructs a shared Bird's-Eye View (BEV) feature map of the vehicle's surroundings \cite{hu_planning-UniAD_2023}.
-Four transformer decoders then consume that representation in order.
-TrackFormer detects and tracks agents with learnable track queries; MapFormer segments lanes and road dividers with map queries.
+Four transformer decoders are then used to interpret that representation in the following order.
+TrackFormer detects and tracks agents with learnable track queries. MapFormer segments lanes and road dividers with map queries.
 MotionFormer fuses both perception streams to forecast multi-agent futures, and OccFormer predicts future occupancy grids that tell the planner where space will be occupied in time.
 A planning head finally cross-attends over the BEV with an ego query from MotionFormer and a high-level navigation command, and decodes short-horizon $(x,y)$ waypoints for the ego vehicle.
 At inference time, the authors additionally refine the waypoints with a Newton-based collision-avoidance step which steers the plan away from occupied cells predicted by OccFormer.
 However, this refinement runs only during deployment and never enters the training graph \cite{hu_planning-UniAD_2023}.
 
 The hybridization utilized in UniAD is neural rather than optimization-based.
-UniAD couples modules through shared query interfaces, and a planning loss on the decoded waypoints backpropagates through MotionFormer, OccFormer, and the upstream perception heads, nudging TrackFormer and MapFormer to produce features that help planning rather than maximize isolated perception scores \cite{hu_planning-UniAD_2023}.
-That gradient path stops at the learned planning decoder: there is no differentiable optimal-control layer, no interpretable cost decomposition, and no actuator-level controller receiving the plan.
-
-On nuScenes \cite{caesar_nuScenesMultimodalDataset_2020}, the planning-centric organization pays off in concrete numbers.
+UniAD couples modules via shared query interfaces, and makes use of the waypoint's planning loss which are backpropagates through MotionFormer, OccFormer, and the upstream perception heads.
+TrackFormer and MapFormer are further rewarded to produce features that help planning rather than maximize isolated perception scores \cite{hu_planning-UniAD_2023}.
+Notably, the gradient path does not proceed beyond the learned planning decoder and therefore is only contained to improve the planning phase.
+Fortunately, the planning-centric methodology does show to be effective on the multimodal dataset nuScenes \cite{caesar_nuScenesMultimodalDataset_2020}.
 After pre-training perception and prediction separately, the full stack trained end-to-end cuts average planning L2 error from 2.11\,m to 1.03\,m and average collision rate from 0.71\% to 0.31\% relative to the prior vision-based method ST-P3 \cite{hu_planning-UniAD_2023}.
-Ablations show that adding motion forecasting and occupancy prediction before the planner steadily improves both metrics, and UniAD also matches or beats task-specific baselines on tracking, online mapping, motion forecasting, and occupancy prediction despite not targeting those metrics directly \cite{hu_planning-UniAD_2023}.
+Results additionally show that adding motion forecasting and occupancy prediction before the planner steadily improves both metrics, and UniAD also matches or beats task-specific baselines on tracking, online mapping, motion forecasting, and occupancy prediction despite not targeting those metrics directly \cite{hu_planning-UniAD_2023}.
 
 UniAD nevertheless remains only a partial instance of the differentiable modular stack pursued in this thesis.
-The planner predicts positions without explicit velocity, yaw, or dynamic feasibility constraints, and collision reasoning relies on static occupancy proximity rather than time-to-collision.
-The optional Newton refinement at inference is a hand-designed post-process outside backpropagation, and the stack never reaches a low-level controller.
-In short, UniAD demonstrates that planning-oriented joint training across neural modules is valuable, but it does not deliver sensor-to-actuator, optimization-aware differentiability.
+The planner predicts positions without explicit velocity, yaw, or dynamic feasibility constraints.
+Collision reasoning also relies on static occupancy proximity rather than time-to-collision method.
+Hence, the optimization stack never reaches the controller level and is not able to collect information at that stage to backpropagate.
+In short, UniAD demonstrates that planning-oriented joint training across neural modules is valuable, but it cannot capture sensor-to-actuator, optimization-aware differentiability.
 
 \subsection{DiffStack}
 \label{subsection:DiffStack}
@@ -154,27 +155,30 @@ In short, UniAD demonstrates that planning-oriented joint training across neural
 % 2. Substantial gains in open-loop and closed-loop planning metrics compared with separately trained modules.
 % Joint training beats local training — End-to-end training outperforms training prediction in isolation, even when using handcrafted “planning-aware” auxiliary losses.
 % Keeps modularity — Still uses explicit prediction, planning, and control blocks; you get co-optimization without a black-box end-to-end network.
-Karkus et al. \cite{karkus_DiffStackDifferentiableModular_2022} take the opposite emphasis from UniAD: instead of replacing classical planners with neural decoders, DiffStack keeps explicit prediction, planning, and control blocks and makes each one differentiable enough for joint training.
-
-The prediction module is a graph-structured Conditional Variational Autoencoder (CVAE).
+Karkus et al. \cite{karkus_DiffStackDifferentiableModular_2022} take an opposing emphasis from UniAD.
+DiffStack keeps explicit prediction, planning, and control blocks and makes each one differentiable enough for joint training.
+The prediction module is defined as a graph-structured Conditional Variational Autoencoder (CVAE).
 For every agent, GRU encoders ingest a few seconds of state history together with a vectorized local map, and an attention layer aggregates information over the agent interaction graph.
-The CVAE samples a latent variable and decodes multiple future trajectory hypotheses with associated probabilities; both steps stay differentiable so downstream losses can reach the encoder weights.
-
+The CVAE samples a latent variable and decodes multiple future trajectory possibilities with associated probabilities; both steps stay differentiable so downstream losses can reach the encoder weights.
 The planner samples $N$ dynamically feasible ego trajectories toward a goal, scores each candidate with a parametric cost $C(\cdot \,; w)$, and relaxes discrete selection into a softmax over negative costs \cite{karkus_DiffStackDifferentiableModular_2022}.
 That softmin turns an otherwise hard argmin into a differentiable distribution over candidates with respect to both the predicted agent states and the learnable weights $w$.
+Finally, The control module wraps up with box-constrained iterative Linear Quadratic Regulator (iLQR) MPC \cite{karkus_DiffStackDifferentiableModular_2022}.
+iLQR linearizes dynamics, solves a local LQR sub-problem, and iterates until convergence.
+Implicit differentiation is achieved through the final sub-problem's Karush-Kuhn-Tucker (KKT) conditions, following Amos et al. \cite{amos_OptNetDifferentiableOptimization_2017, karkus_DiffStackDifferentiableModular_2022}.
+Hence, achieving analytical gradients of the controlled trajectory with respect to $w$ and, through the collision-cost terms, with respect to the predicted agent states.
 
-The control module closes the loop with box-constrained iterative Linear Quadratic Regulator (iLQR) MPC over a dynamically extended unicycle model \cite{karkus_DiffStackDifferentiableModular_2022}.
-iLQR linearizes dynamics, solves a local LQR sub-problem, and iterates until convergence; implicit differentiation through the final sub-problem's Karush-Kuhn-Tucker (KKT) conditions, following Amos et al. \cite{amos_OptNetDifferentiableOptimization_2017, karkus_DiffStackDifferentiableModular_2022}, yields analytical gradients of the controlled trajectory with respect to $w$ and, through the collision-cost terms, with respect to the predicted agent states.
+Training was conducted on nuScenes \cite{caesar_nuScenesMultimodalDataset_2020} by aiming to minimize the loss $\mathcal{L} = \mathcal{L}_{\text{pred}} + \mathcal{L}_{\text{plan}} + \mathcal{L}_{\text{ctrl}}$.
+The researchers combined a forecasting loss, a cross-entropy that pulls the soft planner selection toward the ground-truth candidate, and a control loss that measures imitation error after iLQR \cite{karkus_DiffStackDifferentiableModular_2022}.
+They found that joint optimization reshapes the predictor toward planning-relevant forecasts.
+Where DiffStack reports up to roughly 15\% higher prediction effectiveness for planning and reduces final control cost by up to 15.5\% compared with separately trained modules \cite{karkus_DiffStackDifferentiableModular_2022}.
 
-Training on nuScenes \cite{caesar_nuScenesMultimodalDataset_2020} minimizes $\mathcal{L} = \mathcal{L}_{\text{pred}} + \mathcal{L}_{\text{plan}} + \mathcal{L}_{\text{ctrl}}$, combining a forecasting loss, a cross-entropy that pulls the soft planner selection toward the ground-truth candidate, and a control loss that measures imitation error after iLQR \cite{karkus_DiffStackDifferentiableModular_2022}.
-Joint optimization reshapes the predictor toward planning-relevant forecasts: DiffStack reports up to roughly 15\% higher prediction effectiveness for planning and reduces final control cost by up to 15.5\% compared with separately trained modules, while hand-crafted ``planning-aware'' auxiliary losses on a non-differentiable stack still fall short \cite{karkus_DiffStackDifferentiableModular_2022}.
-
-The gradient story is more fragmented than the architecture diagram suggests.
-In the reference implementation, the planner output is explicitly detached before initializing iLQR, so control-loss gradients reach the prediction module by bypassing the planner rather than flowing through it \cite{karkus_DiffStackDifferentiableModular_2022}.
-The cost weights $w$ therefore see planning-loss gradients but not control-loss gradients, and the softmax still relaxes only the choice among a finite sample set rather than differentiating the sampling process itself.
-Perception also sits entirely upstream: DiffStack assumes clean agent tracks and an HD map, so the chain begins at structured state estimates rather than raw sensors.
-Finally, only the weight vector $w$ is learned. The cost terms and vehicle model remain hand-specified.
-DiffStack thus spans prediction through control with interpretable classical modules, yet it still stops short of the fully coupled, sensor-to-actuator differentiability targeted by DiffPlan in this thesis.
+However, there exists discontinuities in the gradient path of DiffStack which hold it back from reaching full differentiability.
+The planner output is explicitly detached before initializing iLQR. 
+Consequently, control-loss gradients reach the prediction module by bypassing the planner rather than flowing through it \cite{karkus_DiffStackDifferentiableModular_2022}.
+Therefore, the cost weights $w$ are aware of planning-loss gradients but not control-loss gradients, and the softmax still relaxes only the choice among a finite sample set rather than differentiating the sampling process itself.
+Additionally, DiffStack assumes clean construction of the state estimate using its sensors and agent tracker, so the perception module sits entirely outside of the stack.
+Finally, only the weight vector $w$ is learned, the cost terms and vehicle model remain hand-specified.
+DiffStack thus spans prediction through control with interpretable modules, yet it is unable to reach the full capacity of its optimization through the limited gradient path.
 
 \subsection{DIPP}
 \label{subsection:DIPP}
@@ -187,28 +191,32 @@ DiffStack thus spans prediction through control with interpretable classical mod
 % Joint training beats sequential training — In both open-loop and closed-loop tests, integrated training outperforms using a separately trained prediction module — on both planning and prediction metrics.
 % Planning-centric prediction — Predictions are shaped so the planner produces trajectories closer to human driving, not just lower raw forecast error.
 % Learned cost function — Planner weights are learned from data instead of manually tuned, improving stability and performance (ablations show learnable components matter).
-Huang et al. \cite{huang_DifferentiableIntegratedMotion_2024} push the coupling between prediction and planning one step further with Differentiable Integrated Motion Prediction and Planning (DIPP).
-Where DiffStack relaxes discrete trajectory selection inside a sampler, DIPP embeds a differentiable nonlinear optimizer directly in the loop and treats the planner's cost weighting as a learnable quantity.
+Huang et al. \cite{huang_DifferentiableIntegratedMotion_2024} address the coupling between prediction and planning with Differentiable Integrated Motion Prediction and Planning (DIPP).
+Where previously DiffStack relaxes discrete trajectory selection inside a sampler to achieve differentiability.
+DIPP embeds a differentiable nonlinear optimizer directly in the system, treating the planner's cost weightings as learnable parameters.
 
-DIPP ingests a vectorized scene: past ego and agent state histories together with an HD-map lane graph \cite{huang_DifferentiableIntegratedMotion_2024}.
-A transformer encoder embeds each agent trajectory and map polyline, then applies self-attention over agents and cross-attention to map elements so interaction and lane context enter a shared feature space \cite{vaswani_AttentionAllYou_2017}.
-A multi-modal decoder on top of that embedding predicts a small set of future trajectories and mode probabilities for every surrounding agent, and also proposes an initial ego plan that seeds the optimizer \cite{huang_DifferentiableIntegratedMotion_2024}.
-
+DIPP processes a vectorized scene made up of past ego and agent state histories alongside an HD-map lane graph \cite{huang_DifferentiableIntegratedMotion_2024}.
+A transformer encoder combines each agent trajectory and map polyline into a unified representation, using self-attention over agents and cross-attention to map elements \cite{vaswani_AttentionAllYou_2017}.
+A multi-modal decoder predicts a small set of future trajectories and mode probabilities for every surrounding agent, while proposing an initial ego plan that seeds the optimizer \cite{huang_DifferentiableIntegratedMotion_2024}.
 The planner solves an open-loop, finite-horizon optimal-control problem.
 It selects a control sequence $u_{1:T}$ that minimizes
 \begin{equation}
     C\!\left(s_{1:T}, u_{1:T}; \omega\right) = \sum_i \omega_i\, c_i\!\left(s_{1:T}, u_{1:T}, \hat{s}^{\text{pred}}_{1:T}\right),
 \end{equation}
-where each $c_i$ is a squared residual for progress, comfort, safety relative to the predicted trajectories $\hat{s}^{\text{pred}}_{1:T}$, or rule compliance, and each scalar weight $\omega_i$ is learned from data \cite{huang_DifferentiableIntegratedMotion_2024}.
-A Gauss-Newton solver iterates on the linearized residuals until convergence; because both the residuals and the solver are differentiable, backpropagation can reach the predicted agent states and the weights $\omega_i$ by implicitly differentiating through the solver's fixed point \cite{huang_DifferentiableIntegratedMotion_2024}.
+where each $c_i$ is a squared residual for progress, comfort, safety relative to the predicted trajectories $\hat{s}^{\text{pred}}_{1:T}$, or rule compliance.
+Each scalar weight $\omega_i$ is learned from data \cite{huang_DifferentiableIntegratedMotion_2024}.
+A Gauss-Newton solver iterates on the linearized residuals until convergence.
+The researchers also noted that the residuals and the solver are differentiable, hence, backpropagation can reach the predicted agent states and the weights $\omega_i$ by implicitly differentiating through the solver's fixed point \cite{huang_DifferentiableIntegratedMotion_2024}.
 
-End-to-end training minimizes an imitation loss between the optimized ego trajectory and logged human driving, plus a standard forecasting loss on surrounding agents \cite{huang_DifferentiableIntegratedMotion_2024}.
-One backward pass jointly updates the scene encoder and decoder, the cost weights $\omega_i$, and the prediction heads, so gradients from the planner reshape forecasts toward what the optimizer actually needs, a behavior the authors call planning-centric prediction.
-On the Waymo Open Motion Dataset, DIPP consistently beats modular baselines and pipelines with a separately trained predictor, improving minADE and collision-rate metrics; ablations show that freezing the learnable cost weights hurts both stability and final performance \cite{huang_DifferentiableIntegratedMotion_2024}.
+Notably, end-to-end training minimizes an imitation loss between the optimized ego trajectory and logged human driving, alongside a forecasting loss for surrounding agents \cite{huang_DifferentiableIntegratedMotion_2024}.
+A unified backward pass jointly updates the scene encoder-decoder, the prediction heads, and the planner's cost weights $\omega_i$.
+Consequently, gradients backpropagated through the optimizer refine the predicted trajectories to directly support motion planning, a mechanism the authors call planning-centric prediction.
+On the Waymo Open Motion Dataset, DIPP outperforms both modular baselines and pipelines utilizing independently trained predictors, demonstrating improvements in minADE and collision rates  \cite{huang_DifferentiableIntegratedMotion_2024}.
 
-DIPP advances the modular differentiable idea by letting the planner's objective, not just a downstream loss, participate in learning.
-The remaining gaps mirror those of DiffStack at the stack boundaries: perception and map vectorization happen upstream of the gradient path, no controller turns the planned trajectory into actuator commands, and each residual $c_i$ keeps a fixed functional form with only its weight $\omega_i$ free to adapt.
-DIPP therefore still offers partial rather than full sensor-to-actuator differentiability, the setting DiffPlan in this thesis extends by pushing gradients further toward onboard sensing and through additional planner parameters while keeping modular structure.
+DIPP extends modular differentiable planning by integrating the planner's cost formulation directly into the gradient path. 
+However, several architectural limitations persist at the stack boundaries.
+The perception and map vectorization remain non-differentiable upstream components, execution lacks a low-level controller to convert planned trajectories into actuator commands, and the cost residuals $c_i$ rely on fixed functional forms where only the scalar weights $\omega_i$ are learnable.
+DIPP therefore still offers partial rather than full sensor-to-actuator differentiability.
 
 \subsection{MIND}
 \label{subsection:MIND}
@@ -218,29 +226,33 @@ DIPP therefore still offers partial rather than full sensor-to-actuator differen
 %* finalize on how this only fulfills partial differentiability as opposed to a fully end-to-end differentiable stack but this is moving in the right direction
 % MIND Stack
 % \cite{jahncke_MINDStackModularInterpretable_2025}
-Jahncke and Betz \cite{jahncke_MINDStackModularInterpretable_2025} introduce the Modular, Interpretable, and Differentiable (MIND) software stack, which shifts the hybrid discussion from large-scale urban driving to the RoboRacer / F1TENTH autonomous racing platform used in this thesis \cite{betz_TUMAutonomousMotorsport_2023, okelly_F1TENTHOpensourceEvaluation_2019}.
-MIND addresses a gap left by systems such as UniAD, DiffStack, and DIPP: although those frameworks show that joint optimization across modules is beneficial, they either remain perception-heavy urban stacks, stop before actuator commands, or assume clean upstream state estimates rather than learning directly from onboard sensor data under tight embedded compute limits.
-MIND instead builds a compact stack around two explicit modules, a learned localization network and a classical Stanley controller, and arranges them so that a downstream control loss can train the upstream localization module beyond pure state estimation.
+Jahncke and Betz \cite{jahncke_MINDStackModularInterpretable_2025} introduce the Modular, Interpretable, and Differentiable (MIND) software stack, which shifts the autonomy requirement to the RoboRacer autonomous racing platform \cite{betz_TUMAutonomousMotorsport_2023, okelly_F1TENTHOpensourceEvaluation_2019}.
+MIND is formulated to address a gap left by systems such as UniAD, DiffStack, and DIPP.
+Albeit, those frameworks show that joint optimization across modules is beneficial, they limit the number of modules included in this optimization.
+This achieves partial or incomplete optimization when looking throughout the entire stack. 
+MIND instead builds a compact stack around two explicit modules, a learned localization network and a classical Stanley controller.
+Hence, the authors setup the modules in a manner that a downstream control loss can train the upstream localization module.
 
-The MIND pipeline begins with the sensor observations available on the RoboRacer vehicle and passes them through a localization network that estimates the ego pose relative to the track.
-Between this network and the controller, the stack exposes human-interpretable intermediate quantities such as lateral cross-track error and heading error relative to the reference path, rather than hiding all reasoning inside a single latent vector \cite{jahncke_MINDStackModularInterpretable_2025}.
-These quantities feed directly into a Stanley controller, a well-known geometric path-tracking law that maps cross-track and heading error into steering commands while a separate speed controller regulates longitudinal velocity.
-Because the controller is implemented as a fixed analytical law, its operation remains transparent to the engineer even though its outputs participate in end-to-end training.
-
-The differentiability of MIND comes from treating the Stanley controller as a differentiable downstream operator during training.
-The stack defines a control loss that measures tracking error along the reference trajectory, and backpropagates this loss through the controller into the localization network \cite{jahncke_MINDStackModularInterpretable_2025}.
-As a result, the localization module does not merely minimize pose-estimation error in isolation; it learns representations that reduce the steering and tracking mistakes the controller will actually produce on track.
-This is a different hybridization pattern from UniAD's neural task fusion and from DiffStack's gradient path through prediction and MPC: MIND couples raw sensor input to actuator-relevant control error across a very small number of explicit modules, and it does so on real embedded hardware rather than only in offline urban benchmarks.
-
+The MIND pipeline begins with the sensor observations available on the RoboRacer vehicle and passes them through a localization CNN that estimates the ego pose relative to the track.
+Hence, intermediate quantities such as lateral cross-track error $e_{\text{cross}}$ and heading error relative to the reference path $e_{\text{head}}$ are calculated from the ego pose \cite{jahncke_MINDStackModularInterpretable_2025}.
+The Stanley controller uses these quantities to calculate a steering angle based on the following formula:
+\begin{equation}
+    \delta = k_h e_{\text{head}} + \arctan \left(\frac{k_e e_{\text{cross}}}{v}\right),
+\end{equation}
+where $\delta$ is the steering angle, $k_h$ is a tuning parameter for the heading error, $k_e$ is a tuning parameter for the sensitivity of the controller for the cross-track error, and $v$ represents the vehicle's current speed.
+The simple differentiability of MIND comes from enabling all modules to be differentiable during training.
+A control loss is defined that measures tracking error along the reference trajectory, and backpropagates this loss through the controller into the localization network \cite{jahncke_MINDStackModularInterpretable_2025}.
+As a result, the localization module minimizes pose-estimation error and learns representations that reduce the steering and tracking mistakes the controller will produce on track.
+As discussed previously, this approach relies on a different hybridization pattern than UniAD's neural task fusion and from DiffStack's gradient path. 
+MIND couples raw sensor input to actuator control error across a two modules.
 In their experiments, Jahncke and Betz report that this end-to-end training reduces downstream control loss and yields better tracking performance than state-of-the-art localization baselines trained without the control objective \cite{jahncke_MINDStackModularInterpretable_2025}.
-The authors also demonstrate sim-to-real transfer by deploying the jointly trained stack on the physical RoboRacer platform and training localization and controller together toward a single tracking goal under onboard compute constraints \cite{jahncke_MINDStackModularInterpretable_2025}.
-For the racing context of this thesis, that result is especially relevant because it shows that differentiable modularity can survive contact with real-time embedded deployment, not just large-scale offline datasets.
+The authors also demonstrate sim-to-real transfer by deploying the jointly trained stack on the physical RoboRacer platform \cite{jahncke_MINDStackModularInterpretable_2025}.
 
 MIND nevertheless remains only a partial realization of a full modular differentiable driving stack.
-The current version spans localization and control, but it does not yet include prediction, obstacle interaction, or a differentiable motion planner between perception and actuation.
-The reference path is assumed to be available, and the stack does not address the richer local replanning problem that becomes necessary when trajectories must be sampled, scored, and selected online during racing.
-This limitation directly motivates the subsequent DiffPlan work \cite{swadiryus_DifferentiableMotionPlanning_2025, koch_DifferentiableInterpretablePath_2025}, which extends the MIND philosophy by inserting a differentiable sampling-based motion planner whose cost-function parameters can receive gradients from downstream losses, while still preserving the interpretable modular structure that MIND established on the RoboRacer platform.
-Even in its present form, however, MIND is an important step: it proves that partial differentiability can be both interpretable and deployable, and it provides the software foundation on which the motion-planning extensions examined in the remainder of this thesis are built.
+No inclusion of prediction, obstacle interaction, or a differentiable motion planner between perception and actuation.
+Further limitation assumes the reference path to be available, and no local refinement plan is executed when racing.
+These limitation directly motivate the subsequent DiffPlan work \cite{swadiryus_DifferentiableMotionPlanning_2025, koch_DifferentiableInterpretablePath_2025}, which extends the MIND philosophy by inserting a differentiable sampling-based motion planner.
+Even in its present form, however, MIND is an important step as it proves that partial differentiability can be both interpretable and deployable, and provides the software foundations this thesis is built on.
 
 \chapter{Motion Planners}
 \label{chapter:MotionPlanners}
@@ -546,7 +558,7 @@ In the DiffPlan stack, the perception stage is implemented as DiffLoc, the diffe
 DiffLoc estimates the vehicle's pose relative to the track from onboard LiDAR measurements.
 On the RoboRacer platform, the module consumes scans from a Hokuyo UST-10LX 2D LiDAR sensor together with a short history of previous poses.
 
-The network is built as a one-dimensional convolutional neural network followed by fully connected layers that regress the current pose $(\hat{x}, \hat{y}, \hat{\psi})$, consisting of the Cartesian position of the vehicle on the track and the global heading of the car respectively \cite{jahncke_MINDStackModularInterpretable_2025, swadiryus_DifferentiableMotionPlanning_2025}.
+The network is built as a one-dimensional convolution neural network followed by fully connected layers that regress the current pose $(\hat{x}, \hat{y}, \hat{\psi})$, consisting of the Cartesian position of the vehicle on the track and the global heading of the car respectively \cite{jahncke_MINDStackModularInterpretable_2025, swadiryus_DifferentiableMotionPlanning_2025}.
 Localization on closed-loop racetracks is particularly challenging due to the repetitive and recurring geometry as the car laps around the circuit.
 The LiDAR can produce highly similar scan patterns at different locations along the circuit.
 DiffLoc mitigates this ambiguity by conditioning each prediction with the vehicle's prior pose rather than on the raw scan alone.
