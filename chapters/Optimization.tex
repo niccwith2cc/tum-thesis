@@ -75,12 +75,13 @@ Algorithm~\ref{alg:vec-long-sampling} summarizes the vectorized procedure.
 \end{algorithm}
 
 This reformulation reduces the number of sequential linear solves from $N$ to one, yielding an $N$-fold improvement in that phase.
-In practice, this change will depend on the size of $N$ and the results for the runtime benchmarks can be found in Chapter~\ref{chapter:Results}.
+In practice, this change will depend on the size of $N$.
+The results for the runtime benchmarks can be found in Chapter~\ref{chapter:Results}.
 
 \section{Vectorize Wall Proximity Calculation}
 \label{section:VecWallCollision}
 
-The profiler identified this function to take almost half the total execution time, which matches with the findings of Koch \cite{koch_DifferentiableInterpretablePath_2025}.
+Furthermore, the profiler identified this function to take almost half the total execution time, which matches with the findings of Koch \cite{koch_DifferentiableInterpretablePath_2025}.
 The collision loss depends on the distance between the ego vehicle and the nearest track-boundary point within a local search radius.
 To approximate this distance, the planner discretizes the centerline into $N$ arc-length samples, where in this case $N = 50$ and computes left and right wall coordinates at each sample.
 Algorithm~\ref{alg:orig-wall-collision} shows the original loop-based implementation.

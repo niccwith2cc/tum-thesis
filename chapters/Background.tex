@@ -280,7 +280,7 @@ This chapter provides a review of possible methodologies for solving the path pl
 For global planning, a predefined and often pre-computed global trajectory is supplied for the vehicle to follow.
 This is the simplest form of motion planning, as it assumes that the surroundings of the vehicle are static and the overall predefined map does not change.
 The trajectory is computed once and then passed to the vehicle.
-The global path can often include details including position, velocity, acceleration, and heading information which the vehicle tries to follow \cite{heilmeier_MinimumCurvatureTrajectory_2020}.
+The global path can often include details including position, velocity, acceleration, and heading information which the vehicle attempts to adhere \cite{heilmeier_MinimumCurvatureTrajectory_2020}.
 Global planning is often formulated as an initial reference path that provide the vehicle with the most basic trajectory information.
 This is a perfect use case for a factory autonomous mobile robot, if the environment does not change.
 When applying to racing scenarios, this is often described as a racing line, a path of a known racing track which under ideal conditions leads to the objective to minimize the lap time of the vehicle \cite{heilmeier_MinimumCurvatureTrajectory_2020, liniger_OptimizationBasedAutonomousRacing_2017}.
@@ -368,13 +368,13 @@ A* extends Dijkstra's search with a heuristic that estimates the remaining cost 
 Hybrid A* further combines discrete graph search with continuous vehicle kinematics, connecting lattice nodes through dynamically feasible arcs so that the resulting path respects the vehicle's steering limits and minimum turning radius \cite{gonzalez_ReviewMotionPlanning_2016}.
 
 These methods have been deployed extensively in autonomous driving.
-During the DARPA Urban Challenge, Boss used a layered planning architecture whose motion-planning layer combined behavioral reasoning with graph-based search to navigate urban traffic \cite{urmson_autonomous_2008}.
+During the DARPA Urban Challenge, the vehicle Boss used a layered planning architecture whose motion-planning layer combined behavioral reasoning with graph-based search to navigate urban traffic \cite{urmson_autonomous_2008}.
 Hybrid A* and lattice-based search were likewise adopted by several Urban Challenge entrants to generate kinematically feasible trajectories in structured road networks \cite{gonzalez_ReviewMotionPlanning_2016}.
 
 The principal drawbacks of graph and search planners are tied to their discretization.
 Coarse grids can miss narrow passages or produce paths that are not dynamically feasible, whereas fine grids improve resolution at the cost of memory occupancy and query time, which becomes prohibitive over large operational areas \cite{gonzalez_ReviewMotionPlanning_2016, loganathan_systematic_2023}.
-Collision checking along candidate edges and the discrete choice of which node to expand next introduce further hard decisions into the pipeline.
-From the perspective of differentiable modular stacks, this is a critical limitation: the planner output is a piecewise-constant function of its inputs, so gradients cannot flow through the discrete search and selection steps that define the final path \cite{koch_DifferentiableInterpretablePath_2025, karkus_DiffStackDifferentiableModular_2022}.
+Collision checking along candidate edges and the discrete choice of which node to expand next introduce further complexity into the pipeline.
+From the perspective of differentiable modular stacks, the planner only outputs a piecewise-constant function of its inputs, so gradients cannot flow through the discrete search and selection steps that define the final path \cite{koch_DifferentiableInterpretablePath_2025, karkus_DiffStackDifferentiableModular_2022}.
 
 \subsection{Sampling-Based Planners}
 \label{subsection:SamplingBased}
@@ -390,10 +390,10 @@ RRT* retains this exploration strategy but additionally rewires the tree so that
 Despite this improvement, practical implementations still trade off sample count against solution quality and real-time latency \cite{orthey_SamplingBasedMotionPlanning_2023, wursching_SamplingBasedOptimalTrajectory_2021}.
 
 Sampling-based methods are attractive for high-dimensional and cluttered environments because they offer probabilistic completeness without requiring a full discretization of the state space \cite{orthey_SamplingBasedMotionPlanning_2023, zhang_IntegratingAlgorithmicSamplingBased_2022}.
-They have been applied to highway trajectory planning \cite{zhang_IntegratingAlgorithmicSamplingBased_2022}, urban scenarios with reachable-set pruning \cite{wursching_SamplingBasedOptimalTrajectory_2021, althoff_CommonRoadComposableBenchmarks_2017}, and local replanning on autonomous race cars \cite{ogretmen_local_2025, liniger_OptimizationBasedAutonomousRacing_2017}.
+They have been applied to highway trajectory planning \cite{zhang_IntegratingAlgorithmicSamplingBased_2022}, urban driving scenarios with reachable-set pruning \cite{wursching_SamplingBasedOptimalTrajectory_2021, althoff_CommonRoadComposableBenchmarks_2017}, and local replanning on autonomous race cars \cite{ogretmen_local_2025, liniger_OptimizationBasedAutonomousRacing_2017}.
 Recent work has also used reinforcement learning to bias sampling toward regions of the action space that are more likely to yield feasible trajectories, reducing the number of samples required at runtime \cite{moller_LearningSampleReinforcement2025}.
 
-The main limitations of classical sampling-based planners are threefold.
+However, there are limitations associated with these sampling-based planners.
 First, standard RRT provides no optimality guarantee, and even RRT* only converges to the optimum as the number of samples grows, which may exceed real-time budgets in safety-critical driving scenarios \cite{orthey_SamplingBasedMotionPlanning_2023}.
 Second, uniform or heuristic sampling can produce large numbers of infeasible candidates in complex traffic, wasting computation before a valid trajectory is found \cite{zhang_IntegratingAlgorithmicSamplingBased_2022, wursching_SamplingBasedOptimalTrajectory_2021}.
 Third, like graph planners, sampling-based methods are non-differentiable: random sampling, collision-based rejection of edges, and the eventual selection of a single trajectory are discrete operations that block gradient flow to upstream modules \cite{koch_DifferentiableInterpretablePath_2025, karkus_DiffStackDifferentiableModular_2022}.
@@ -410,18 +410,19 @@ Werling et al.\ \cite{werling_OptimalTrajectoryGeneration_2010} established this
 The approach has since been adopted widely in both urban and racing contexts, including GPU-accelerated implementations for embedded F1TENTH platforms \cite{muzzini_GPUImplementationFrenet_2024}, online velocity-aware local planning for autonomous racing \cite{langmann_OnlineVelocityProfile_2025}, and full-scale race-car deployments \cite{ogretmen_local_2025}.
 The sampling strategy used in DiffPlan, described in Section~\ref{section:DiffPlanPlanning}, follows the same polynomial-based Frenet formulation.
 
-The strengths of Frenet trajectory sampling are modularity and interpretability: candidate generation, feasibility checking, and cost evaluation are separate, engineer-readable stages, and the separation of longitudinal and lateral motion simplifies constraint specification along curved roads \cite{werling_OptimalTrajectoryGeneration_2010, gonzalez_ReviewMotionPlanning_2016}.
-Its drawbacks are equally well documented.
+Notably, constructing samples of Frenet trajectories is efficient as the candidate generation, feasibility checking, and cost evaluation are separate.
+Futhermore, the separation of longitudinal and lateral motion simplifies constraint specification along curved roads \cite{werling_OptimalTrajectoryGeneration_2010, gonzalez_ReviewMotionPlanning_2016}.
+Albeit, the drawbacks are equally well documented.
 Performance depends strongly on the quality of the reference path; large deviations from the raceline or lane center can invalidate the sampled candidates \cite{langmann_OnlineVelocityProfile_2025}.
-Polynomial parameterizations may not fully capture vehicle dynamics, and the number of candidates grows combinatorially with the sampling resolution, creating a tension between coverage and real-time feasibility \cite{werling_OptimalTrajectoryGeneration_2010, muzzini_GPUImplementationFrenet_2024}.
+Polynomial parameterizations may not fully capture vehicle dynamics, and the number of candidates grows with the sampling resolution, creating a balance between coverage and real-time feasibility \cite{werling_OptimalTrajectoryGeneration_2010, muzzini_GPUImplementationFrenet_2024}.
 Most importantly for this thesis, selecting the minimum-cost trajectory is a discrete $\arg\min$ operation over a finite candidate set.
 As Koch \cite{koch_DifferentiableInterpretablePath_2025} notes for sampling-based planners in general, this hard selection step prevents end-to-end gradient-based training unless the planner is explicitly relaxed, which motivates the differentiable extensions developed in the following subsection.
 
 \subsection{Differentiable Motion Planners}
 
-The hybrid frameworks reviewed in Section~\ref{section:ModDiffStack} (UniAD, DiffStack, DIPP, and MIND) demonstrate that partial differentiability across modular stacks improves planning and control performance, yet each stops short of a fully sensor-to-actuator differentiable racing pipeline.
+The hybrid frameworks reviewed in Section~\ref{section:ModDiffStack} (UniAD, DiffStack, DIPP, and MIND) demonstrate that partial differentiability across modular stacks improves planning and control performance.
 DiffStack and DIPP relax discrete trajectory selection and learn planner cost weights through implicit differentiation of optimal-control solvers \cite{amos_OptNetDifferentiableOptimization_2017, blondel_EfficientModularImplicit_2022, pineda_TheseusLibraryDifferentiable_2022}.
-Koch \cite{koch_DifferentiableInterpretablePath_2025} extends this idea to Frenet sampling-based local planning on the RoboRacer platform by replacing the hard $\arg\min$ with Straight-Through-Gumbel-Softmin and connecting planner output to downstream control through end-to-end loss terms \cite{jang_CategoricalReparameterizationGumbel_2017, maddison_ConcreteDistributionContinuous_2017, bengio_EstimatingPropagatingGradients_2013}.
+Koch \cite{koch_DifferentiableInterpretablePath_2025} extends this idea to Frenet sampling-based local planning on the RoboRacer platform by replacing the hard $\arg\min$ with Straight-Through Gumbel-Softmin and routing the planner output to the downstream control module through end-to-end loss terms \cite{jang_CategoricalReparameterizationGumbel_2017, maddison_ConcreteDistributionContinuous_2017, bengio_EstimatingPropagatingGradients_2013}.
 The following chapter describes DiffPlan, the differentiable temporal-sampling planner that builds on MIND and forms the starting point for the spatial-sampling extension developed later in this thesis.
 
 \chapter{DiffPlan}
@@ -432,12 +433,11 @@ The following chapter describes DiffPlan, the differentiable temporal-sampling p
 %* How can we describe it
 This section will cover the full workings of DiffPlan \cite{swadiryus_DifferentiableMotionPlanning_2025, koch_DifferentiableInterpretablePath_2025}.
 The full architectural structure will be explained, including how the algorithm interfaces with the simulator and the real car.
-Going through the pipeline step by step to explain the steps of how we achieve our objective.
 
 \section{Architecture}
 \label{section:DiffPlanArchitecture}
 
-The architectural layout of DiffPlan can be broken down into five major sections of perception, prediction, planning, control, and loss calculation.
+As observed in Fig \ref{fig:diffplan-architecture}, the architectural layout of DiffPlan can be broken down into five major sections of perception, prediction, planning, control, and loss calculation.
 The perception unit is carried over from the MIND stack. % describe stack here in detail.
 % The RoboRacer platform utilizes Hokuyo UST-10LX 2D LiDAR 
 % sensor which introduces a one-dimensional convolution neural network (1D-CNN) designed for LiDAR-based localization on closed-loop tracks.
@@ -542,8 +542,7 @@ Finally, the loss function is computed at the end which combines all the previou
 The DiffPlan stack can run in two environments.
 For training, it can be containerized inside the F1TENTH gym simulator \cite{okelly_F1TENTHOpensourceEvaluation_2019, dosovitskiy_CARLAOpenUrban_2017}.
 For deployment, it can be embedded into a ROS2 node to drive the physical RoboRacer vehicle \cite{kabzan_AMZDriverlessFull_2020}.
-This dual interface broadens the adaptability of the architecture.
-
+The choice was deliberate as it provided a safe and fast testing environment in the simulator which could then be loaded to the physical car with minor changes.  
 The major objective of DiffPlan is to learn trainable cost weights \(\theta\) that score trajectory samples. 
 The cost weights are then updated using gradient based optimizations.
 
@@ -556,7 +555,7 @@ The cost weights are then updated using gradient based optimizations.
 
 In the DiffPlan stack, the perception stage is implemented as DiffLoc, the differentiable localization module inherited from the MIND stack \cite{jahncke_MINDStackModularInterpretable_2025, swadiryus_DifferentiableMotionPlanning_2025}.
 DiffLoc estimates the vehicle's pose relative to the track from onboard LiDAR measurements.
-On the RoboRacer platform, the module consumes scans from a Hokuyo UST-10LX 2D LiDAR sensor together with a short history of previous poses.
+On the RoboRacer platform, the module receives scans from a Hokuyo UST-10LX 2D LiDAR sensor together with a short history of previous poses.
 
 The network is built as a one-dimensional convolution neural network followed by fully connected layers that regress the current pose $(\hat{x}, \hat{y}, \hat{\psi})$, consisting of the Cartesian position of the vehicle on the track and the global heading of the car respectively \cite{jahncke_MINDStackModularInterpretable_2025, swadiryus_DifferentiableMotionPlanning_2025}.
 Localization on closed-loop racetracks is particularly challenging due to the repetitive and recurring geometry as the car laps around the circuit.
@@ -577,25 +576,21 @@ Because DiffLoc remains differentiable during stack training, gradients from dow
 \label{section:DiffPlanPrediction}
 
 Unlike urban differentiable stacks such as DiffStack or DIPP, DiffPlan does not include a learned multi-agent forecasting module \cite{koch_DifferentiableInterpretablePath_2025, swadiryus_DifferentiableMotionPlanning_2025}.
-The original MIND stack likewise omitted prediction entirely, and both Swadiryus and Koch retain only a lightweight environment-modeling stage that supplies the planner with external object information rather than training a dedicated trajectory predictor \cite{jahncke_MINDStackModularInterpretable_2025, swadiryus_DifferentiableMotionPlanning_2025, koch_DifferentiableInterpretablePath_2025}.
+The original MIND stack likewise omitted prediction entirely, and both Swadiryus and Koch retain only a lightweight environment-modeling stage that supplies the planner with fixed obstacle information rather than a full trajectory predictor \cite{jahncke_MINDStackModularInterpretable_2025, swadiryus_DifferentiableMotionPlanning_2025, koch_DifferentiableInterpretablePath_2025}.
 In simulation, this stage therefore provides ground-truth positions and planned future waypoints for other traffic participants instead of estimating them from onboard sensors, which isolates planner training from compounding perception and prediction errors \cite{koch_DifferentiableInterpretablePath_2025}.
 
-The prediction interface serves two practical roles in DiffPlan.
 For static obstacle avoidance, the planner receives the known locations of obstacles placed around the raceline over a fixed spatial horizon ahead of the ego vehicle.
 Because these obstacles remain stationary, their positions can be preprocessed before runtime and reused throughout training and evaluation \cite{swadiryus_DifferentiableMotionPlanning_2025}.
 On the physical platform, the same information is obtained from manually placed markers and estimated with a motion-capture system rather than from a learned detector \cite{swadiryus_DifferentiableMotionPlanning_2025}.
 For dynamic interaction, DiffPlan implements head-to-head racing against a single opponent agent.
-Swadiryus \cite{swadiryus_DifferentiableMotionPlanning_2025} configures this agent as a lead vehicle that follows the same global raceline as the ego car but operates under a reduced velocity cap, creating a standardized overtaking scenario in simulation.
-In the FTM Halle head-to-head setup, the opponent is limited to a maximum speed of approximately 1.15~m/s, while the ego vehicle retains its nominal speed range of 2.0~m/s to 3.7~m/s, and both cars are initialized with a fixed longitudinal gap so the trailing vehicle must react to the slower lead car \cite{swadiryus_DifferentiableMotionPlanning_2025}.
+Swadiryus \cite{swadiryus_DifferentiableMotionPlanning_2025} configures a standardized overtaking scenario, where a lead opponent vehicle follows the same global raceline as the ego car but operates under a reduced velocity cap.
+However, both cars are initialized with a fixed longitudinal gap so the trailing vehicle must react to the slower lead car \cite{swadiryus_DifferentiableMotionPlanning_2025}.
 
 Koch \cite{koch_DifferentiableInterpretablePath_2025} extends this scenario for planner co-optimization experiments by equipping the opponent with the same planning architecture as the ego vehicle while still constraining its maximum velocity.
-The ego vehicle starts several meters behind the opponent to force repeated overtaking opportunities, and Koch introduces a speed-scaling factor that further limits the lead car when a velocity advantage is needed for safe passing.
-The planner consumes the opponent's planned trajectory through the adversary collision cost term, which penalizes ego candidates that approach the lead vehicle's predicted path too closely, and through behavior planning logic that reduces the ego target velocity when a slower car is detected directly ahead \cite{koch_DifferentiableInterpretablePath_2025, swadiryus_DifferentiableMotionPlanning_2025}.
+The ego vehicle starts several meters behind the opponent to force repeated overtaking opportunities.
+The planner incorporates the opponent's planned trajectory through the adversary collision cost term, which penalizes ego candidates that approach the lead vehicle's predicted path too closely \cite{koch_DifferentiableInterpretablePath_2025, swadiryus_DifferentiableMotionPlanning_2025}.
 Only vehicles ahead of the ego are considered, assigning right-of-way to the lead car and placing the burden of collision avoidance on the trailing vehicle at each timestep \cite{koch_DifferentiableInterpretablePath_2025}.
-Koch demonstrates in head-to-head experiments that the planner can learn cost-weight settings that transition from unsafe following behavior to successful overtaking within a single training lap, even though the opponent model itself remains a simple velocity-capped agent rather than a full interactive prediction module \cite{koch_DifferentiableInterpretablePath_2025}.
-
-In summary, prediction in DiffPlan should be understood as a simplified interaction layer: static obstacles and a single capped-speed opponent provide the planner with the minimum environment context needed for collision-aware local planning and overtaking, without the complexity of a learned multi-modal prediction network.
-This design keeps the racing stack focused on differentiable planning and control while leaving full agent forecasting as future work \cite{swadiryus_DifferentiableMotionPlanning_2025, koch_DifferentiableInterpretablePath_2025}.
+Although a simplified predictive model is implemented, Koch demonstrates in the head-to-head experiments that the planner can learn cost-weight settings that transition from unsafe following behavior to successful overtaking within a single training lap. \cite{koch_DifferentiableInterpretablePath_2025}.
 
 \section{Planning}
 \label{section:DiffPlanPlanning}
@@ -742,7 +737,6 @@ At each timestep, the squared error between the planned speed $V(t)$ and the ref
 \end{equation}
 The reference profile depends on the driving context.
 If the current speed exceeds the target speed, $V_{\text{ref}}(t)$ follows a deceleration ramp toward the target; otherwise, it tracks the raceline velocity $V_{\text{rl}}(t)$ \cite{swadiryus_DifferentiableMotionPlanning_2025}.
-Swadiryus additionally scales penalties for driving below the reference speed with a factor $\lambda_{\text{excess}}$ to discourage unnecessarily slow trajectories \cite{swadiryus_DifferentiableMotionPlanning_2025}.
 
 \subsubsection{Raceline cost}
 The raceline cost pulls candidate trajectories toward the precomputed global raceline by penalizing lateral deviation over the planning horizon \cite{swadiryus_DifferentiableMotionPlanning_2025, koch_DifferentiableInterpretablePath_2025}.
@@ -767,7 +761,7 @@ For trajectories that violate this condition, the cost is computed from the earl
 \begin{equation}
     C_{\text{coll}} = \frac{\Delta V}{\text{TTC}^2}.
 \end{equation}
-Koch describes the adversary variant of this term more qualitatively as assigning higher cost to trajectories that approach the opponent's planned path too closely, with penalty strength increasing as the distance decreases \cite{koch_DifferentiableInterpretablePath_2025}.
+Koch describes this term as assigning higher cost to trajectories that approach the opponent's planned path too closely, with penalty strength increasing as the vehicles approach each other \cite{koch_DifferentiableInterpretablePath_2025}.
 
 \subsubsection{Wall-proximity cost}
 Rather than rejecting wall-intersecting samples with a hard feasibility check, Koch replaces the binary wall constraint with a continuous penalty that grows as a candidate approaches the track boundary \cite{koch_DifferentiableInterpretablePath_2025}.
@@ -783,7 +777,7 @@ A safety margin $d_{\text{safe}}$ then triggers a fourth-power penalty on the sh
 \begin{equation}
     \delta_t = \max(0,\; d_{\text{safe}} - d_{\min, t}), \qquad C_{\text{wall}} = \sum_{t=0}^{T-1} \alpha_t \, \delta_t^{\,4}.
 \end{equation}
-The exponent sharpens the penalty as the candidate approaches the boundary while remaining smoothly differentiable, encouraging the planner to maintain a safety buffer while still allowing learnable trade-offs between aggression and collision risk.
+The exponent sharpens the penalty as the candidate approaches the boundary while keeping the function differentiable. This encourages the planner to maintain a safety buffer while still experimenting with more aggressive driving style.
 
 \subsubsection{Jitter cost}
 To reduce path oscillations between consecutive planning cycles, Koch includes a jitter penalty that measures the deviation of each candidate from the trajectory selected in the previous planning step \cite{koch_DifferentiableInterpretablePath_2025}.
@@ -817,13 +811,12 @@ In the notation used by Koch, each category $j$ contributes $c_{\text{sample}, j
     C_{\text{sample}} = \sum_j \theta_j \, c_{\text{sample}, j}.
     \label{eq:DiffPlanTotalCost}
 \end{equation}
-Swadiryus uses the same weighted-sum structure with weights $w_j$ on the four baseline terms $C_{\text{curv}}$, $C_{\text{vel}}$, $C_{\text{rl}}$, and $C_{\text{coll}}$ \cite{swadiryus_DifferentiableMotionPlanning_2025}.
-To keep the three trajectory-quality weights balanced during optimization, Swadiryus normalizes the curvature, velocity, and raceline weights with a temperature-scaled softmax so that they form a convex combination:
+To keep the weights balanced during optimization, the weights are normalized with a temperature-scaled softmax so that they form a convex combination:
 \begin{equation}
     w_i = \frac{\exp(w_{\text{init}, i} / \tau)}{\sum_{k \in \{\text{curv}, \text{vel}, \text{rl}\}} \exp(w_{\text{init}, k} / \tau)}, \qquad i \in \{\text{curv}, \text{vel}, \text{rl}\},
 \end{equation}
 while the collision weight remains unconstrained so that safety can be scaled independently \cite{swadiryus_DifferentiableMotionPlanning_2025}.
-Koch extends this idea to eleven trainable parameters $\theta_j$ covering the additional linear and nonlinear terms, and the candidate with the lowest $C_{\text{sample}}$ is passed to the differentiable sample-selection stage described in Section~\ref{subsection:SampleSelection} \cite{koch_DifferentiableInterpretablePath_2025}.
+Finally, the candidate with the lowest $C_{\text{sample}}$ is passed to the differentiable sample-selection stage described in Section~\ref{subsection:SampleSelection} \cite{koch_DifferentiableInterpretablePath_2025}.
 
 \subsection{Sample Selection}
 \label{subsection:SampleSelection}
@@ -904,7 +897,7 @@ A common quadratic tracking objective penalizes deviation from the planner refer
 \end{equation}
 where $Q$ and $R$ weight tracking error and control smoothness, and $\Delta u_{t+k} = u_{t+k} - u_{t+k-1}$ \cite{swadiryus_DifferentiableMotionPlanning_2025}.
 
-Classical MPC is effective for trajectory tracking but its solver is not differentiable by default, which prevents end-to-end co-training with perception or planning modules \cite{amos_differentiable_2018, swadiryus_DifferentiableMotionPlanning_2025}.
+Classical MPC is effective for trajectory tracking but its solver is not differentiable by default \cite{amos_differentiable_2018, swadiryus_DifferentiableMotionPlanning_2025}.
 Differentiable MPC addresses this by differentiating through the optimizer's fixed point.
 For the linear-quadratic case, the optimal state-control sequence $\tau_t = [x_t, u_t]$ satisfies
 \begin{equation}
@@ -918,8 +911,7 @@ and gradients of a downstream loss $\ell(\tau^{*})$ with respect to problem para
 The backward pass can be implemented as another LQR problem that reuses the Riccati factorization from the forward solve \cite{amos_differentiable_2018, swadiryus_DifferentiableMotionPlanning_2025}.
 
 For nonlinear vehicle dynamics, non-quadratic costs, and box constraints on inputs, DiffMPC iteratively linearizes the dynamics and quadratizes the cost, then solves the resulting subproblem with iterative LQR (iLQR) until convergence \cite{amos_differentiable_2018, swadiryus_DifferentiableMotionPlanning_2025, tungka_diffmpc_2024}.
-Gradients are obtained from the final convexified problem at the solver fixed point, enabling the controller to participate in the same end-to-end training loop as DiffPlan's planner and localization modules \cite{koch_DifferentiableInterpretablePath_2025, swadiryus_DifferentiableMotionPlanning_2025}.
-Koch \cite{koch_DifferentiableInterpretablePath_2025} adopts DiffMPC in the modified stack to improve tracking quality and provide stronger gradients during planner co-optimization.
+Gradients are obtained from the final convex problem at the solver fixed point, enabling the controller to participate in the same end-to-end training loop as DiffPlan's planner and localization modules \cite{koch_DifferentiableInterpretablePath_2025, swadiryus_DifferentiableMotionPlanning_2025}.
 
 % \subsection{Differentiable Model Predictive Control}
 % \cite{amos_differentiable_2018,wang_pypose_2023,tungka_diffmpc_2024}
@@ -951,35 +943,29 @@ At the second timestep,
         \theta_2 &= \mathrm{wrap}\!\left(\theta_1 + \frac{v\tan(\delta)}{L_{\mathrm{wb}}}\,\Delta t_2\right).
     \end{aligned}
 \end{equation}
-The resulting estimated pose is used to calculate the cross-track and heading error for the control loss.
-This enables end-to-end gradient flow, allowing the localization module to be trained on the control loss.
+The resulting estimated pose is used to calculate the cross-track and heading error for the control loss, enabling end-to-end gradient flow.
 
 \section{Loss Formulation}
 \label{section:LossFormulation}
-
-The loss function closes the end-to-end training loop of DiffPlan.
-At each control timestep, the stack executes a forward pass through localization, planning, control, and, in Koch's extended formulation, a differentiable motion model that propagates the estimated vehicle pose over the next two timesteps \cite{swadiryus_DifferentiableMotionPlanning_2025, koch_DifferentiableInterpretablePath_2025}.
-The resulting supervisory signal is a weighted sum of module-specific terms whose gradients flow backward through every differentiable stage, enabling co-optimization of localization parameters, planner cost weights, and, where the gradient path is unbroken, controller behavior \cite{swadiryus_DifferentiableMotionPlanning_2025, koch_DifferentiableInterpretablePath_2025}.
 
 \subsection{Composite Objective}
 
 Swadiryus \cite{swadiryus_DifferentiableMotionPlanning_2025} defines the baseline DiffPlan training objective as a weighted combination of localization, planning, and control losses:
 \begin{equation}
-    \mathcal{L}_{\text{total}} = \alpha_{\text{loc}}\,\mathcal{L}_{\text{loc}} + \alpha_{\text{plan}}\,\mathcal{L}_{\text{plan}} + \alpha_{\text{ctr}}\,\mathcal{L}_{\text{ctrl}},
+    \mathcal{L}_{\text{total}} = \alpha_{\text{loc}}\,\mathcal{L}_{\text{loc}} + \alpha_{\text{plan}}\,\mathcal{L}_{\text{plan}} + \alpha_{\text{ctrl}}\,\mathcal{L}_{\text{ctrl}},
     \label{eq:DiffPlanTotalLoss}
 \end{equation}
 where $\alpha_{\text{loc}}$, $\alpha_{\text{plan}}$, and $\alpha_{\text{ctr}}$ are scalar weighting factors that set the relative importance of each module during optimization.
 In end-to-end training, Swadiryus uses $\alpha_{\text{loc}} = 1.0$, $\alpha_{\text{plan}} = 0.3$, and $\alpha_{\text{ctr}} = 5.0$ \cite{swadiryus_DifferentiableMotionPlanning_2025}.
 When training the planner in isolation with ground-truth pose estimates, only $\alpha_{\text{plan}}$ is nonzero \cite{swadiryus_DifferentiableMotionPlanning_2025}.
 
-Koch \cite{koch_DifferentiableInterpretablePath_2025} retains the same additive structure but replaces the decoupled planner-centric supervision of Swadiryus with control-driven terms that rate the executed vehicle state rather than the planned trajectory alone.
+Koch \cite{koch_DifferentiableInterpretablePath_2025} retains the same formula but replaces the previous terms with control-driven quantities that rate the executed vehicle state rather than the planned trajectory alone.
 The total loss is therefore expressed as
 \begin{equation}
     \mathcal{L}_{\text{total}} = \sum_i \alpha_i\,\mathcal{L}_i,
     \label{eq:KochTotalLoss}
 \end{equation}
 where each $\mathcal{L}_i$ encodes one driving objective and the coefficients $\alpha_i$ are chosen per experiment.
-Because Koch couples the loss to the pose predicted by the motion model after DiffMPC, gradients can propagate through control, differentiable sample selection, and the planner cost weights $\theta_j$ in a single backward pass: the end-to-end training mode that Swadiryus's original stack could not fully exploit due to non-differentiable trajectory selection \cite{swadiryus_DifferentiableMotionPlanning_2025, koch_DifferentiableInterpretablePath_2025}.
 
 \subsection{Localization Loss}
 
@@ -1017,7 +1003,7 @@ where the first term penalizes lateral deviation from the reference path, the se
 
 Koch does not use Eq.~\eqref{eq:DiffPlanCtrlLoss} directly as the downstream supervisory signal.
 Instead, the controller output is passed through the differentiable motion model described above, and the propagated pose is evaluated with the progress, collision-proximity, and raceline losses defined below \cite{koch_DifferentiableInterpretablePath_2025}.
-This design ties planner cost-weight learning to the pose that the vehicle would actually reach after actuation, rather than to the open-loop plan alone.
+This design ties planner cost-weight learning to the pose that the vehicle would actually reach after actuation.
 
 \subsection{Progress Loss}
 

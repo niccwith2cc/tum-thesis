@@ -5,7 +5,7 @@
 %! exactly similar to diffplan but different planner
 %! talk about ROS2 intrgration and how that works
 
-DiffSpatialPlan, the spatial sampling planner introduced in this chapter, is based on the online sampling algorithm of Langmann et al.\ \cite{langmann_OnlineVelocityProfile_2025}, whose approach centers on two objectives:
+DiffSpatialPlan, a newly implemented spatial sampling planner introduced in this chapter, is based on the online sampling algorithm of Langmann et al.\ \cite{langmann_OnlineVelocityProfile_2025}, whose approach centers on two objectives:
 \begin{itemize}
     \item Recomputing a real-time velocity profile along a fixed raceline, which reflects the varying vehicle dynamics of the car rather than relying on a static offline reference.
     %! fix
@@ -16,17 +16,18 @@ It is instead implemented on the RoboRacer platform under a two-dimensional trac
 The following sections describe the adopted spatial planning algorithm.
 
 At each planning cycle, DiffSpatialPlan receives the ego pose from state estimation and projects it onto the Frenet frame of the offline raceline, yielding the longitudinal coordinate $s_0$, lateral offset $n_0$, heading $\chi_0$, and speed magnitude $v_0$.
-The pipeline then proceeds in three stages that mirror the structure of Langmann et al.\ \cite{langmann_OnlineVelocityProfile_2025} but are adapted to the two-dimensional RoboRacer environment and made fully differentiable for end-to-end training.
+The pipeline then proceeds in three stages that mirror the structure of Langmann et al.\ \cite{langmann_OnlineVelocityProfile_2025} but are adapted to fit the desired criteria.
 First, online apex detection identifies cornering events ahead of the vehicle and associates each with a locally refined apex location and speed.
 Second, a forward-backward solver propagates longitudinal motion along the raceline under the current acceleration limits, producing a time-stamped online velocity reference $V_{\text{ref}}(s)$.
-Third, a spatial sampling stage generates a batch of lateral trajectory candidates over a fixed arc-length horizon, assigns each candidate a speed profile derived from $V_{\text{ref}}$, converts the spatial plans to the temporal domain for evaluation, and selects a trajectory through a differentiable soft-min operator.
+Third, a spatial sampler generates a batch of lateral trajectory candidates over a fixed arc-length horizon, assigning each candidate a speed profile derived from $V_{\text{ref}}$.
+Then converts the spatial plans to the temporal domain for evaluation, and selects a trajectory through a differentiable soft-min operator.
 The selected plan is passed downstream to the controller in the same format as DiffPlan, preserving compatibility with the remainder of the stack.
 
 \section{Apex Detection}
 \label{section:ApexDetection}
 
 %! emphasise racing
-When a car takes a corner, there is a moment when the task changes: the driver stops turning in and starts driving out.
+As a car is nearing a corner, the driver must be aware to position the car correctly.
 That moment happens at the apex, the tightest part of the bend and usually the innermost point on the track.
 A good driver brakes before the apex, is at its slowest around it, and only gets back on the throttle once the car is pointed toward the exit and can accelerate again \cite{betz_AutonomousVehiclesEdge_2022, betz_TUMAutonomousMotorsport_2023}.
 Corners are rarely driven at one steady speed; the car slows on the way in, carries speed through the tightest section as grip allows, and only picks up pace once it is past the apex \cite{heilmeier_MinimumCurvatureTrajectory_2020}.
