@@ -2,17 +2,13 @@
 \chapter{Spatial Sampling Planner}
 \label{chapter:SpatialSampler}
 
-%! exactly similar to diffplan but different planner
-%! talk about ROS2 intrgration and how that works
-
 DiffSpatialPlan, a newly implemented spatial sampling planner introduced in this chapter, is based on the online sampling algorithm of Langmann et al.\ \cite{langmann_OnlineVelocityProfile_2025}, whose approach centers on two objectives:
 \begin{itemize}
     \item Recomputing a real-time velocity profile along a fixed raceline, which reflects the varying vehicle dynamics of the car rather than relying on a static offline reference.
-    %! fix
     \item Generating apex-aware trajectory candidates, aligning the braking and corner-entry with the online velocity profile along the track.
 \end{itemize}
-However, DiffSpatialPlan diverges from the original algorithm intended for full-sized autonomous race cars that race on three-dimensional circuits at high speeds.
-It is instead implemented on the RoboRacer platform under a two-dimensional track assumption.
+However, DiffSpatialPlan diverges from the original algorithm, which was intended for full-sized autonomous race cars that race on three-dimensional circuits at high speeds.
+Instead, it is implemented on the RoboRacer platform, assuming a two-dimensional track.
 The following sections describe the adopted spatial planning algorithm.
 
 At each planning cycle, DiffSpatialPlan receives the ego pose from state estimation and projects it onto the Frenet frame of the offline raceline, yielding the longitudinal coordinate $s_0$, lateral offset $n_0$, heading $\chi_0$, and speed magnitude $v_0$.
@@ -20,15 +16,14 @@ The pipeline then proceeds in three stages that mirror the structure of Langmann
 First, online apex detection identifies cornering events ahead of the vehicle and associates each with a locally refined apex location and speed.
 Second, a forward-backward solver propagates longitudinal motion along the raceline under the current acceleration limits, producing a time-stamped online velocity reference $V_{\text{ref}}(s)$.
 Third, a spatial sampler generates a batch of lateral trajectory candidates over a fixed arc-length horizon, assigning each candidate a speed profile derived from $V_{\text{ref}}$.
-Then converts the spatial plans to the temporal domain for evaluation, and selects a trajectory through a differentiable soft-min operator.
+Then converts the spatial plans into the temporal domain for evaluation and selects a trajectory using a differentiable soft-min operator.
 The selected plan is passed downstream to the controller in the same format as DiffPlan, preserving compatibility with the remainder of the stack.
 
 \section{Apex Detection}
 \label{section:ApexDetection}
 
-%! emphasise racing
-As a car is nearing a corner, the driver must be aware to position the car correctly.
-That moment happens at the apex, the tightest part of the bend and usually the innermost point on the track.
+As a car approaches a corner, the driver must be aware of how to position the car correctly to lose as little time as possible going through the corner.
+The tightest part of the bend and usually the innermost point on the track is called the apex.
 A good driver brakes before the apex, is at its slowest around it, and only gets back on the throttle once the car is pointed toward the exit and can accelerate again \cite{betz_AutonomousVehiclesEdge_2022, betz_TUMAutonomousMotorsport_2023}.
 Corners are rarely driven at one steady speed; the car slows on the way in, carries speed through the tightest section as grip allows, and only picks up pace once it is past the apex \cite{heilmeier_MinimumCurvatureTrajectory_2020}.
 
@@ -36,9 +31,9 @@ Motion planners must reason about apexes for the same reason.
 They mark where braking ends and acceleration can begin, and they break the track ahead into pieces that are easier to plan one corner at a time.
 Following Langmann et al.\ \cite{langmann_OnlineVelocityProfile_2025}, an apex is defined as the arc-length location of a local minimum in the feasible velocity profile along the raceline.
 That location can shift with the currently available tire grip and need not coincide with the point of maximum curvature.
-On the RoboRacer platform the track is treated as two-dimensional, and raceline curvature is denoted by $\kappa_{\text{rl}}(s)$.
+On the RoboRacer platform, the track is treated as two-dimensional, and raceline curvature is denoted by $\kappa_{\text{rl}}(s)$.
 
-To detect apexes online, the planner searches the raceline ahead of the current position $s_{\text{start}}$ over a fixed optimization horizon $h_{\text{opt}}$:
+To detect apexes in real-time, the planner searches the raceline ahead of the current position $s_{\text{start}}$ over a fixed optimization horizon $h_{\text{opt}}$:
 \begin{equation}
     s_{\text{ahead}} \in \left[s_{\text{start}},\, s_{\text{start}} + h_{\text{opt}}\right].
     \label{eq:apexLookahead}
@@ -51,7 +46,7 @@ For every candidate $s_{\text{cand},i}$, a shorter local search interval of leng
     s_{\text{search},i} \in \left[s_{\text{cand},i} - \tfrac{l}{2},\, s_{\text{cand},i} + \tfrac{l}{2}\right].
     \label{eq:apexSearchInterval}
 \end{equation}
-Along $s_{\text{search},i}$, the planner estimates the maximum admissible speed at each sample point using fixed-point iteration.
+Along $s_{\text{search}, i}$, the planner estimates the maximum admissible speed at each sample point using fixed-point iteration.
 The iteration starts from the offline raceline velocity $V_{\text{off}}$:
 \begin{equation}
     V^{(0)}(s) = V_{\text{off}}(s).
@@ -64,12 +59,6 @@ Assuming negligible longitudinal acceleration at the sample point, each update r
 \end{equation}
 The iteration continues until $|V_{\text{new}} - V_{\text{old}}| < \epsilon$ for a chosen tolerance $\epsilon$, or until a maximum number of steps is reached; in the latter case, $V_{\text{guess}}$ is kept as the admissible velocity.
 Repeating this procedure at every sample along $s_{\text{search},i}$ yields an admissible speed profile over the local window.
-
-% The refined apex location $s_{\text{apex},i}$ is then the point on $s_{\text{search},i}$ where the admissible velocity reaches its minimum,
-% \begin{equation}
-%     s_{\text{apex},i} = \arg\min_{s \in s_{\text{search},i}} V_{\text{adm}}(s).
-%     \label{eq:apexLocationHard}
-% \end{equation}
 
 In DiffSpatialPlan, the hard $\arg\min$ over the local search grid is replaced by a differentiable soft aggregation that concentrates weight on the slowest admissible speeds.
 Let $\{s_m,\, V_m\}_{m=1}^{M}$ denote the samples along $s_{\text{search},i}$ with corresponding admissible velocities from \eqref{eq:apexVelUpdate}.
@@ -89,70 +78,13 @@ As $\tau_{\text{apex}} \to 0$, the weights concentrate on the minimum-velocity s
 
 This two-step procedure is repeated for every candidate in the upcoming track section: curvature maxima propose corners, and admissible-velocity minima place the apex.
 The resulting pairs $\{(s_{\text{apex},i},\, v_{\text{apex},i})\}$ segment the path ahead and provide the terminal speed constraints used by the online velocity profile generation described in the following section.
-% That is not always the sharpest part of the corner, especially on banked or hilly circuits, and it can move as grip or acceleration limits change.
-% The planner finds these points online and uses them to place spatial samples and build the velocity profile around the real shape of the corners ahead.
-% Define absolute curvature samples
-% \begin{equation}
-% \bar{\kappa}_k = \left|\kappa_k\right|, \qquad k = 0, 1, \ldots, K-1.
-% \end{equation}
-% An interior index $i \in \{1, 2, \ldots, K-2\}$ is an apex candidate if
-% \begin{equation}
-% \bar{\kappa}_i > \bar{\kappa}_{i-1}
-% \quad \text{and} \quad
-% \bar{\kappa}_i > \bar{\kappa}_{i+1}.
-% \end{equation}
-% Let the set of candidate indices be
-% \begin{equation}
-% \mathcal{I} = \left\{ i \in \{1, 2, \ldots, K-2\} \;\middle|\; \bar{\kappa}_i > \bar{\kappa}_{i-1} \;\wedge\; \bar{\kappa}_i > \bar{\kappa}_{i+1} \right\}.
-% \end{equation}
-% If $\mathcal{I} = \emptyset$, return empty apex vectors. Otherwise, let $N_{\mathrm{c}} = \left|\mathcal{I}\right|$ and enumerate
-% \begin{equation}
-% \mathcal{I} = \left\{ i_1, i_2, \ldots, i_{N_{\mathrm{c}}} \right\}.
-% \end{equation}
-% For each candidate index $c \in \mathcal{I}$, define the corresponding window sample $s_c$.
-% \subparagraph{Local search grid.}
-% With half-width $\ell_{\mathrm{half}} = 0.5\,\mathrm{m}$ and $M = 20$ points,
-% \begin{equation}
-% \Delta_m = -\ell_{\mathrm{half}} + \frac{m}{M-1}\left(2\ell_{\mathrm{half}}\right), \qquad m = 0, 1, \ldots, M-1,
-% \end{equation}
-% \begin{equation}
-% \tilde{s}_m = \mathrm{wrap}_{S_{\mathrm{lap}}}\!\left(s_c + \Delta_m\right), \qquad m = 0, 1, \ldots, M-1.
-% \end{equation}
-% \subparagraph{Curvature and offline speed on the local grid.}
-% \begin{equation}
-% \tilde{\kappa}_m = \kappa\!\left(\tilde{s}_m\right), \qquad m = 0, 1, \ldots, M-1,
-% \end{equation}
-% \begin{equation}
-% V_m^{\mathrm{off}} = v_{\mathrm{ref}}\!\left(\tilde{s}_m\right), \qquad m = 0, 1, \ldots, M-1.
-% \end{equation}
-% \subparagraph{Lateral-acceleration speed limit.}
-% With curvature floor $\kappa_{\min} = 10^{-3}$,
-% \begin{equation}
-% V_m = \sqrt{\frac{a_{\mathrm{lat,max}}}{\max\!\left(\left|\tilde{\kappa}_m\right|,\, \kappa_{\min}\right)}}, \qquad m = 0, 1, \ldots, M-1.
-% \end{equation}
-% (The implementation initializes from $V_m^{\mathrm{off}}$ and iterates, but the update depends only on $\tilde{\kappa}_m$, so $V_m$ equals the expression above after one update.)
-% \subparagraph{Soft apex aggregation.}
-% With temperature $\tau_{\mathrm{apex}} = 0.1$, define softmax weights
-% \begin{equation}
-% w_m = \frac{\exp\!\left(-V_m / \tau_{\mathrm{apex}}\right)}{\sum_{j=0}^{M-1} \exp\!\left(-V_j / \tau_{\mathrm{apex}}\right)}, \qquad m = 0, 1, \ldots, M-1.
-% \end{equation}
-% The refined apex location and speed for candidate $c$ are
-% \begin{equation}
-% \begin{aligned}
-% s_c^{\mathrm{apex}} &= \sum_{m=0}^{M-1} w_m\,\tilde{s}_m, \\
-% v_c^{\mathrm{apex}} &= \sum_{m=0}^{M-1} w_m\,V_m.
-% \end{aligned}
-% \end{equation}
 
 \section{Real-Time Velocity Profile Generation}
 \label{section:OnlineVelocityProfile}
 
-% After confirming the location of the apex, the track section which contains $m$ number of apexes is split into $m+1$ segments. A forward-backward solver is used to analytically calculate the online velocity profile.
-% Heilmeier et al.\ \cite{heilmeier_MinimumCurvatureTrajectory_2020} formulate the problem as a quadratic optimization task to compute a minimum-curvature path and use a forward-backward solver to obtain a minimum-time velocity profile.
-
 Once apex locations have been identified, the upcoming raceline section containing $m$ apexes is partitioned into $m+1$ segments at the points $s_{\text{apex},i}$.
 Within each segment, a forward-backward (FW-BW) solver computes a feasible velocity profile that respects the vehicle's combined lateral and longitudinal acceleration limits \cite{langmann_OnlineVelocityProfile_2025, heilmeier_MinimumCurvatureTrajectory_2020}.
-Langmann et al.\ derive the solver from three-dimensional $g$-$g$ diagrams that couple apparent lateral and longitudinal accelerations.
+Langmann et al. \cite{langmann_OnlineVelocityProfile_2025} derive the solver from three-dimensional $g$-$g$ diagrams that couple apparent lateral and longitudinal accelerations.
 Comparatively, the RoboRacer platform, where banking and elevation are neglected, the structure is reduced to a two-dimensional friction ellipse parameterized by a maximum lateral acceleration $a_{\text{lat,max}}$, maximum longitudinal acceleration $a_{\text{accel,max}}$, maximum braking $a_{\text{brake,max}}$, and shape exponent $\rho$.
 
 At each sample $s_k$ along the lookahead grid, a purely lateral speed limit is imposed from the point-mass relation $a_y = v^2 |\kappa_{\text{rl}}(s_k)|$:
@@ -290,18 +222,6 @@ Feasible endpoints are confined to the drivable corridor at $s_0 + S$, accountin
 \end{equation}
 Within this interval, a coarse set of endpoints spans the full corridor width, while an additional dense set is distributed in a neighborhood of the current lateral position $n_0$ to capture small corrective maneuvers near the raceline.
 If the corridor collapses below the sampling width, a single midpoint endpoint is used.
-
-% \subsection{Longitudinal Speed Assignment}
-
-% Each lateral endpoint is combined with a set of velocity scale factors $\lambda \in [\lambda_{\min},\, \lambda_{\max}]$ that modulate the online reference speed along the spatial horizon.
-% At arc length $s(q)$, the speed assigned to a candidate is
-% \begin{equation}
-%     V(q,\lambda) = \lambda \cdot V_{\text{ref}}\!\left(s(q)\right),
-%     \label{eq:velScale}
-% \end{equation}
-% where $V_{\text{ref}}$ is interpolated from the FW-BW profile of Section~\ref{section:OnlineVelocityProfile}.
-% The first point of every candidate is pinned to the current speed magnitude $v_0$ to preserve continuity with the ego state.
-% The Cartesian product of lateral endpoints and velocity scales yields the finite candidate set over which the planner optimizes.
 
 \subsection{Conversion to the Temporal Domain}
 

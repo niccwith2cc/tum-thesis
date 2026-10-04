@@ -13,9 +13,9 @@
 
 This thesis addresses the computational limitations of DiffPlan, a differentiable sampling-based local motion planner for autonomous racing on the RoboRacer platform.
 Prior work showed that gradients from downstream control losses can be backpropagated through the planner to co-train localization and learnable cost weights, but the original implementation was too slow for stable real-time operation on the physical vehicle.
-Two complementary directions are pursued: accelerating the temporal planner through vectorization of trajectory sampling and loss evaluation, and introducing DiffSpatialPlan, a spatial sampling variant that computes an online velocity profile and apex-aware trajectory candidates along a fixed raceline while remaining fully differentiable and compatible with the ROS\,2 stack.
-A GPU-offloading study additionally shows that partial migration to the accelerator is counterproductive while the differentiable MPC controller still solves its LQR sub-problem sequentially on the CPU.
-The vectorized DiffPlan raises the drive-command publish rate from $13.2$\,Hz to $34.1$\,Hz ($2.59\times$ speedup), and DiffSpatialPlan reaches $30.7$\,Hz on the same workstation.
+Two complementary directions are pursued: accelerating the temporal planner by vectorizing trajectory sampling and loss evaluation, and introducing DiffSpatialPlan, a spatial sampling variant that computes an online velocity profile and apex-aware trajectory candidates along a fixed raceline while remaining fully differentiable and compatible with the ROS\,2 stack.
+A GPU-offloading study also shows that partial migration to the accelerator is counterproductive, while the differentiable MPC controller still solves its LQR subproblem sequentially on the CPU.
+The vectorized DiffPlan raises the drive-command publish rate from $13.2$\,Hz to $34.1$\,Hz ($2.59\times$ speedup), and DiffSpatialPlan reaches $30.7$\, Hz on the same workstation.
 Both planners are benchmarked in the F1TENTH Gym simulator on three racetracks and on the physical FTM Oval circuit under identical training objectives.
 In simulation, DiffSpatialPlan consistently records the fastest lap times and is more robust on the boundary-constrained Austria circuit, whereas DiffPlan maintains tighter adherence to the offline raceline.
 On the physical FTM Oval, both planners train successfully under motion-capture localization, but a hardware-imposed speed ceiling compresses the spatial planner's simulated lap-time advantage.
