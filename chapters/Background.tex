@@ -383,42 +383,42 @@ Finally, the loss function is computed, combining all previous streams of module
         gradlbl/.style={font=\scriptsize, text=gray!70!black, fill=white, inner sep=1pt},
     ]
         % --- Perception: CNN only ---
-        \node[comp, draw=yellow, fill=yellow!10, minimum width=2.8cm, minimum height=2.2cm] (perc) at (0, 1.6) {};
-        \node[font=\small\bfseries] at (0, 2.45) {Perception};
+        \node[comp, draw=yellow, fill=yellow!10, minimum width=2.8cm, minimum height=2cm] (perc) at (0, 1.6) {};
+        \node[font=\small\bfseries] at (0, 2.3) {Perception};
         % Centered 1D-CNN icon (three stacked conv layers)
-        \coordinate (cnn_base) at (-0.63, 0.95);
+        \coordinate (cnn_base) at (-0.63, 1.1);
         \foreach \i in {0,1,2} {
             \draw[fill=yellow!45, draw=yellow!70!black, thick, rounded corners=0.5pt]
                 ([xshift=\i*1.8mm, yshift=\i*1.2mm]cnn_base) rectangle
                 ([xshift=\i*1.8mm+9mm, yshift=\i*1.2mm+5.5mm]cnn_base);
         }
-        \node[font=\scriptsize] at (0, 0.65) {1D-CNN};
+        \node[font=\scriptsize] at (0, 0.85) {1D-CNN};
 
         % --- Prediction: empty shell below perception ---
         \node[comp, draw=orange, fill=orange!8, minimum width=2.8cm, minimum height=1cm] (pred) at (0, -0.6) {};
         \node[font=\small\bfseries] at (0, -0.6) {Prediction};
 
         % --- Planning ---
-        \node[comp, draw=blue, fill=blue!8, minimum width=3.6cm, minimum height=3.8cm] (plan) at (6.2, 0.5) {};
-        \node[font=\small\bfseries] at (6.2, 2.15) {Planning};
-        \node[inner, draw=blue, fill=blue!15, minimum width=2.8cm, minimum height=0.65cm] (sample) at (6.2, 1.35) {Sample generation};
-        \node[inner, draw=blue, fill=blue!15, minimum width=2.8cm, minimum height=0.65cm] (assess) at (6.2, 0.35) {Assessment};
-        \node[inner, draw=blue, fill=blue!15, minimum width=2.8cm, minimum height=0.65cm] (select) at (6.2, -0.65) {Sample selection};
+        \node[comp, draw=blue, fill=blue!8, minimum width=3.6cm, minimum height=3.8cm] (plan) at (5.6, 0.5) {};
+        \node[font=\small\bfseries] at (5.6, 2.15) {Planning};
+        \node[inner, draw=blue, fill=blue!15, minimum width=2.8cm, minimum height=0.65cm] (sample) at (5.6, 1.35) {Sample generation};
+        \node[inner, draw=blue, fill=blue!15, minimum width=2.8cm, minimum height=0.65cm] (assess) at (5.6, 0.35) {Assessment};
+        \node[inner, draw=blue, fill=blue!15, minimum width=2.8cm, minimum height=0.65cm] (select) at (5.6, -0.65) {Sample selection};
         \draw[flow, blue] (sample.south) -- (assess.north);
         \draw[flow, blue] (assess.south) -- (select.north);
 
         % --- Control ---
-        \node[comp, draw=green, fill=green!8, minimum width=3.2cm, minimum height=2.8cm] (ctrl) at (11.0, 0.5) {};
-        \node[font=\small\bfseries] at (11.0, 1.7) {Control};
-        \node[inner, draw=green, fill=green!15, minimum width=2.4cm, minimum height=0.75cm] (diffmpc) at (11.0, 0.65) {DiffMPC};
-        \node[inner, draw=green, fill=green!15, minimum width=2.4cm, minimum height=0.75cm] (motion) at (11.0, -0.45) {Motion model};
+        \node[comp, draw=green, fill=green!8, minimum width=3.2cm, minimum height=2.8cm] (ctrl) at (10.2, 0.5) {};
+        \node[font=\small\bfseries] at (10.2, 1.7) {Control};
+        \node[inner, draw=green, fill=green!15, minimum width=2.4cm, minimum height=0.75cm] (diffmpc) at (10.2, 0.65) {DiffMPC};
+        \node[inner, draw=green, fill=green!15, minimum width=2.4cm, minimum height=0.75cm] (motion) at (10.2, -0.45) {Motion model};
         \draw[flow, green!70!black] (diffmpc.south) -- (motion.north);
 
         % --- Loss ---
-        \node[comp, draw=purple, fill=purple!10, minimum width=2.8cm, minimum height=0.75cm] (loss) at (11.0, -2.35) {Loss calculation};
+        \node[comp, draw=purple, fill=purple!10, minimum width=2.8cm, minimum height=0.75cm] (loss) at (10.2, -2.35) {Loss calculation};
 
         % --- Forward data flow ---
-        \draw[flow, black!70] ($(perc.west)+(-2.3,0)$) -- node[lbl, above] {LiDAR scan} (perc.west);
+        \draw[flow, black!70] ($(perc.west)+(-1.5,0)$) -- node[lbl, above] {LiDAR scan} (perc.west);
         \draw[flow, yellow!70!black] (perc.east) -- node[lbl, above] {Pose} (sample.west);
         \draw[flow, orange] (pred.east) to[out=10, in=170]
             node[lbl, pos=0.42, above] {Obstacle locations} ($(sample.west)+(0,0.12)$);
@@ -452,7 +452,7 @@ Finally, the loss function is computed, combining all previous streams of module
         % (f) Direct localization loss supervision to perception. Routed above
         %     the diagram (right of control, over the top, down to perception)
         %     so it never crosses the forward pipeline.
-        \draw[grad] (loss.east) -- (13.2,-2.35) -- (13.2, 3.4)
+        \draw[grad] (loss.east) -- (12.0,-2.35) -- (12.0, 3.4)
             -- node[gradlbl, above] {$\mathcal{L}_{\text{loc}}$} (0, 3.4)
             -- (perc.north);
     \end{tikzpicture}
