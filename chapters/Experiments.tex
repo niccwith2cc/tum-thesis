@@ -2,14 +2,14 @@
 \chapter{Experiments}
 \label{chapter:Experiments}
 
-The current section describes the experiments which were conducted to assess the success of the implemented optimizations.
+The current section describes the experiments conducted to assess the effectiveness of the implemented optimizations.
 The chapter also compares the two sampling planners across three tracks and contrasts their behavior, raceline adherence, and lap-time performance.
-The experiments were all conducted on one desktop workstation with an AMD Ryzen 9 5950X 16-Core Processor with SMT, 64 GB of DDR4 RAM, and an NVIDIA GeForce RTX 3090 GPU with 24GB of GDDR6X VRAM.
+The experiments were conducted on a single desktop workstation with an AMD Ryzen 9 5950X 16-Core Processor with SMT, 64 GB of DDR4 RAM, and an NVIDIA GeForce RTX 3090 GPU with 24 GB of GDDR6X VRAM.
 
 \section{Setup}
 \label{section:Setup}
 
-Before covering the contents of the experiments, it is equally important to first discuss how the DiffPlan and DiffSpatialPlan stacks interfaces with the simulator and the RoborRacer vehicle.
+Before covering the contents of the experiments, it is equally important to first discuss how the DiffPlan and DiffSpatialPlan stacks interface with the simulator and the RoborRacer vehicle.
 In terms of hardware and software compatibility, ROS2 was essential for running both environments for the real-life RoboRacer vehicle and the simulator.
 ROS2 uses the Data Distribution Service (DDS) middleware for typed publish/subscribe communication between independent processes called nodes.
 Each node exchanges messages on named topics, which allows the same planner executable to run in simulation or on the physical vehicle by swapping only the upstream and downstream nodes.
@@ -86,7 +86,7 @@ No static obstacles or opponent vehicles are placed on the track, so experiments
         \label{fig:exp_setup_real}
     \end{subfigure}
     \caption{Experimental control loops in simulation and on the physical RoboRacer vehicle.
-    In both setups, ground-truth pose feeds the planner stack, which returns $\texttt{/drive}$ commands to the plant.
+    In both setups, ground-truth pose is fed to the planner stack, which returns $\texttt{/drive}$ commands to the plant.
     DiffLoc and prediction remain disabled in all benchmark runs.}
     \label{fig:exp_setup}
 \end{figure}
@@ -98,58 +98,58 @@ Three track maps are used in the planner comparison: FTM Oval, Austria, and Yas 
 The ROS2 simulator node initializes the selected track map, spawns the ego vehicle, and simulates the vehicle dynamics at each control timestep.
 It publishes odometry on $\texttt{/ego\_racecar/odom}$ and subscribes to throttle and steering commands on $\texttt{/drive}$.
 Although the simulator exposes LiDAR and other perception topics, these streams are not consumed because all experiments rely on ground-truth pose.
-Contrarily, The workstation desktop which runs the planner stacks subscribes to the odometry topic $\texttt{/ego\_racecar/odom}$ and publishes the $\texttt{/drive}$ topic for the simulator environment.
+Contrarily, the workstation desktop, which runs the planner stacks, subscribes to the odometry topic $\texttt{/ego\_racecar/odom}$ and publishes the $\texttt{/drive}$ topic for the simulator environment.
 
 \subsection{Real Life Setup}
 
 The setup includes three pieces of hardware collaborating over ROS2.
 The RoboRacer vehicle runs the $\texttt{f1tenth\_stack}$ package, the onboard ROS2 software stack that exposes sensor drivers and actuation $\texttt{/drive}$ commands to motor and steering outputs \cite{okelly_F1TENTHOpensourceEvaluation_2019, betz_TUMAutonomousMotorsport_2023}.
-Eight motion-capture cameras surrounds the real-life circuit and keep track of three motion-capture markers across the RoboRacer vehicle's frame obtaining the position and heading of the vehicle.
-The pose and heading data are streamed over ROS2 through the $\texttt{vrpn\_mocap}$ package to the workstation desktop which runs the DiffPlan or DiffSpatialPlan stacks.
+Eight motion-capture cameras surround the real-life circuit and track three motion-capture markers across the RoboRacer vehicle's frame, thereby obtaining the vehicle's position and heading.
+The pose and heading data are streamed over ROS2 through the $\texttt{vrpn\_mocap}$ package to the workstation desktop, which runs the DiffPlan or DiffSpatialPlan stacks.
 The planner subscribes to the pose topic $\texttt{/vrpn\_mocap/odom}$ and publishes $\texttt{/drive}$ commands to the car to actuate its motors for acceleration and steering.
-Figure \ref{fig:exp_setup} illustrates the communication layout in ROS2 between different hardware nodes with Figure \ref{fig:exp_setup_sim} describing the simulation setup and Figure \ref{fig:exp_setup_real} describing the real-life setup.
+Figure \ref{fig:exp_setup} illustrates the communication layout in ROS2 between different hardware nodes, with Figure \ref{fig:exp_setup_sim} describing the simulation setup and Figure \ref{fig:exp_setup_real} describing the real-life setup.
 
 
 \section{Optimization}
 \label{section:Optimization}
 
-This section describes the experiments that were performed to measure the degree of optimization that was accomplished.
-As stated in Chapter \ref{chapter:optimizations}, these experiments follow the vectorization of two inefficient for loop blocks that slowed down the simulation pipeline.
-The original longitudinal sampling and wall collision loss calculation algorithms were vectorized to take advantage of SIMD (Single Instruction, Multiple Data) parallelism \cite{flynn_ComputerOrganizationsTheir_1972}.
+This section describes the experiments performed to measure the degree of optimization achieved.
+As stated in Chapter \ref{chapter:optimizations}, these experiments vectorize two inefficient for-loop blocks that slowed down the simulation pipeline.
+The original longitudinal sampling and wall-collision loss calculation algorithms were vectorized to leverage SIMD (Single Instruction, Multiple Data) parallelism \cite{flynn_ComputerOrganizationsTheir_1972}.
 By applying the same operation to multiple data elements in parallel, SIMD reduces per-iteration loop overhead and improves memory access patterns across contiguous tensor blocks \cite{paszke_PyTorchImperativeStyle_2019}.
-Two major metrics will be looked at: first the full runtime of the algorithm will be assessed, and second the planning runtime will be measured as the number of sampled trajectories increases.
-The initial subsection \ref{subsection:Runtime} will focus on measuring runtime of the four algorithms presented previously and compare them.
+Two major metrics will be looked at: first, the full runtime of the algorithm will be assessed, and second, the planning runtime will be measured as the number of sampled trajectories increases.
+The initial subsection \ref{subsection:Runtime} will focus on measuring the runtimes of the four previously presented algorithms and comparing them.
 Additionally, the scalability of the four algorithms will be assessed as the number of sampled trajectories increases.
 
 \subsection{Runtime}
 \label{subsection:Runtime}
 
-The aim of this experiment is to compare the runtimes of the original, vectorized, and GPU-offloaded versions of the temporal sampling planner together with the spatial sampling planner DiffSpatialPlan.
+The aim of this experiment is to compare the runtimes of the original, vectorized, and GPU-offloaded versions of the temporal sampling planner, as well as the spatial sampling planner DiffSpatialPlan.
 This is done by taking a profile trace of each algorithm using the PyTorch profiler.
-The profiler records all traversed functions that it encounters and the length of time each function took; the trace is saved as a JSON file for offline analysis.
-Each algorithm was profiled consistently at the same start and end points so as not to contaminate any comparisons.
-The experiment was run five times to prevent any outlier data from dominating the measurement, and the runs were averaged to obtain a final time for each section.
-This experiment is track agnostic as the overall runtime is not dependent on what track is being traversed.
+The profiler records all traversed functions and the time each function took; the trace is saved as a JSON file for offline analysis.
+Each algorithm was profiled consistently at the same start and end points to avoid contaminating comparisons.
+The experiment was run 5 times to prevent outliers from dominating the measurement, and the runs were averaged to obtain a final time for each section.
+This experiment is track-agnostic, as the overall runtime does not depend on which track is traversed.
 
 \subsection{Scaling}
 \label{subsection:Scaling}
 
 The purpose of the scaling experiment is to ascertain information about the runtime behavior of the respective planning algorithms as the number of sampled trajectories $n$ grows.
-It indicates how the algorithm's computational complexity grows relative to the problem size.
-The PyTorch profiler is again used for these measurements, saved as a JSON file.
+It indicates how the algorithm's computational complexity scales with the problem size.
+The PyTorch profiler is again used for these measurements, and the results are saved as a JSON file.
 For each value of $n$, the measurement was repeated five times and averaged to reduce the influence of outliers, following the same approach as the runtime experiment in Subsection~\ref{subsection:Runtime}.
 
 \section{Local Sampling Planner}
 \label{section:DiffPlanAndDiffSpatialPlan}
 
-This section covers the experiments performed on the simulator and on the physical vehicle pertaining to the differences between the temporal sampler DiffPlan and the spatial sampler DiffSpatialPlan.
+This section covers experiments performed on the simulator and the physical vehicle to examine the differences between the temporal sampler DiffPlan and the spatial sampler DiffSpatialPlan.
 The overall software and hardware architecture for simulation and real-world deployment is described in Section~\ref{section:Setup} and Figure~\ref{fig:exp_setup}.
-The experiments utilize simulation and real runs to draw conclusions about the individual runs as well as a combined simulation-versus-real comparison.
+The experiments use simulation and real runs to draw conclusions about individual runs and a combined simulation-versus-real comparison.
 On the FTM Oval track, identical conditions were used for both simulation and real-world runs to draw insights into the sim-to-real gap that must be overcome.
 Two other tracks are only available in simulation.
 All tracks were used to test how each algorithm showcases local planning ability, path tracking toward the global goal, and lap-time performance.
 
-Henceforth, all tracks both in simulation and physical, the vehicle was placed initially offset from the raceline with the following initial values for the cost function weights,
+Henceforth, all tracks, both in simulation and physical, the vehicle was placed initially offset from the raceline with the following initial values for the cost function weights,
 \begin{equation*}
     \theta_{\text{curv}} = 0.5, \ \theta_{\text{vel}} = 7.5, \ \theta_{\text{rl}} = 0.5, \ \text{else} \ \theta = 1.0,
 \end{equation*}
@@ -175,16 +175,16 @@ The following metrics will be gathered and evaluated for each track and for both
 \subsection{Simulation Runs}
 
 All simulated tracks are scaled appropriately for the RoboRacer vehicles.
-The tracks are encapsulated in simulation using three files: A png image of the track including boundaries, accompanying a yaml file which contains specific information pertaining to the track such as origin location and resolution, and finally a csv file which contains the full description of the raceline.
+The tracks are encapsulated in a simulation using three files: a PNG image of the track, including boundaries; an accompanying YAML file that contains specific information about the track, such as origin location and resolution; and a CSV file that contains the full description of the raceline.
 The global raceline contains a discretized description of the following metrics along with its associated unit: The longitudinal progress $s (m)$, cartesian positions $x (m), y (m)$, global heading $\psi (\text{rad})$, curvature of track $\kappa (\text{rad}/m)$, velocity $v_x (m/s)$, acceleration $a_x (m/s^2)$.
 All three of the files are used in the simulation to help the vehicle reason about its current objective.
 
 \subsubsection{FTM Oval}
 
 % add image of the track with raceline
-The FTM Oval track is a real track found at Chair of Autonomous Technology at the Technical University Munich which was specifically built for RoboRacer vehicles.
-It features a small oval track that provides adequate feedback of the performance of autonomous RoboRacer vehicles.
-This track was converted to the three files mentioned above to be used in simulation.
+The FTM Oval track is a real track located at the Chair of Autonomous Technology at the Technical University of Munich, specifically built for RoboRacer vehicles.
+It features a small oval track that provides adequate feedback on the performance of autonomous RoboRacer vehicles.
+This track was converted into the three files mentioned above for use in simulation.
 Fig \ref{fig:ftm-oval-track} shows the track layout as well as the initial starting position of the car.
 
 \begin{figure}[htbp]
@@ -194,11 +194,12 @@ Fig \ref{fig:ftm-oval-track} shows the track layout as well as the initial start
 \label{fig:ftm-oval-track}
 \end{figure}
 
+\newpage
 \subsubsection{Yas Marina Track}
 
-This track is modelled after the Yas Marina Formula 1 circuit in the Abu Dhabi Grand Prix but adapted to RoboRacer scale.
+This track is modeled after the Yas Marina Formula 1 circuit in the Abu Dhabi Grand Prix, but adapted to the RoboRacer scale.
 The circuit in Fig \ref{fig:yas-marina-track} features a portion of the complex cornering found in the full circuit with two $180^\circ$ hairpin turns and a series of corners that closely follow each other.
-The combination of high speed driving and slow corners provide adequate conditions to test the capabilities of both planning algorithms.
+The combination of high-speed driving and slow corners provides adequate conditions to test the capabilities of both planning algorithms.
 
 \begin{figure}[htbp]
     \centering
@@ -210,8 +211,8 @@ The combination of high speed driving and slow corners provide adequate conditio
 % \newpage
 \subsubsection{Austria Track}
 
-Once again the track is a RoboRacer adaptation of the Red Bull Ring used in the Austrian Grand Prix in Formula 1 which can be seen in Fig \ref{fig:austria-track}.
-The track features high speed racing line with high curvature corners and tight adherence to the track boundaries.
+Once again, the track is a RoboRacer adaptation of the Red Bull Ring, used in the Austrian Grand Prix in Formula 1, as shown in Fig \ref{fig:austria-track}.
+The track features a high-speed racing line with high-curvature corners and tight adherence to the track boundaries.
 Benchmarking the driving stacks with balancing raceline adherence, maintaining high speed, and careful maneuvering to not crash into the barriers. 
 
 \begin{figure}[htbp]
@@ -223,5 +224,5 @@ Benchmarking the driving stacks with balancing raceline adherence, maintaining h
 
 \subsection{Real Runs}
 
-As the mentioned previously, the FTM Oval track was used to validate the physical deployment of two local motion planners.
-The starting position of the car was marked on the physical track using colored tape to ensure consistency between runs.
+As mentioned previously, the FTM Oval track was used to validate the physical deployment of two local motion planners.
+The car's starting position was marked on the physical track with colored tape to ensure consistency between runs.
